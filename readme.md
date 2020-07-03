@@ -123,7 +123,15 @@ python test.py --method RK23 --rtol 1e-3 --atol 1e-3 --resume 'pre-trained weigh
 <img src="./figures/results.png">
 
 ### Updates
-- Added dense state for ODE solvers, by adding ```options.update({'dense_output': True})```. In this mode, the solver can be called the same way as a function, without re-integrating. 
+- Added dense state for ODE solvers, by adding ```options.update({'dense_output': True})```. In this mode, the solver can be called the same way as a function, without re-integrating. <br/>
+  ```
+  from torch_ACA.odesolver import odesolve
+  options.update({'dense_output': True})
+  out, solver = odesolve(func, initial_condition, options=options)#, time_points=t_list)
+  # out_tmp is evaluated using a dense mode solution, without integrating
+  out_tmp = solver.evaluate_dense_mode(t_eval=options['t_eval'])
+  print(torch.sum((out_tmp - out)**2))
+  ```
 ## References
 [1] Zhuang, Juntang, et al. "Adaptive Checkpoint Adjoint Method for Gradient Estimation in Neural ODE." arXiv preprint arXiv:2006.02493 (2020). [[arxiv]](https://arxiv.org/abs/2006.02493) <br/>
 
