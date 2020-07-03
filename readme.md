@@ -56,7 +56,6 @@ out = odesolve(odefunc, x, options)
 from torch_ACA import odesolve
 options.update({'t_eval': [args.t1]})
 out = odesolve(odefunc, x, options)
-out = out[0,...]
 ```
 - Case2:  t_eval contains multiple time points
 ```
@@ -123,6 +122,8 @@ python test.py --method RK23 --rtol 1e-3 --atol 1e-3 --resume 'pre-trained weigh
 ### Results
 <img src="./figures/results.png">
 
+### Updates
+- Added dense state for ODE solvers, by adding ```options['dense_output'] = True```. In this mode, the solver can be called the same way as a function, without re-integrating. 
 ## References
 [1] Zhuang, Juntang, et al. "Adaptive Checkpoint Adjoint Method for Gradient Estimation in Neural ODE." arXiv preprint arXiv:2006.02493 (2020). [[arxiv]](https://arxiv.org/abs/2006.02493) <br/>
 
