@@ -33,10 +33,7 @@ def odesolve(func, z0, options, return_solver=False, **kwargs):
         else:
             z1 = solver.integrate(z0, t_eval = [options['t1']])
 
-        if 'dense_output' in hyperparams and hyperparams['dense_output'] is True:
-            return z1, solver
-        else:
-            return z1
+        return z1
 
 
 
