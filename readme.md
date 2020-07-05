@@ -23,22 +23,22 @@ options.update({'print_neval': args.print_neval})
 options.update({'neval_max': args.neval_max})
 options.update({'t_eval': [t0, t0 + (t1-t0)/10, ...  ,t1]})
 ```
-# Note:
-## t_eval should be a list of float type, specifying which time points for the solution to evaluate
-## x is a PyTorch tensor
+### Note:
+- t_eval should be a list of float type, specifying which time points for the solution to evaluate
+- x is a PyTorch tensor
 
-# Mode 1: directly get evaluated results
+### Mode 1: directly get evaluated results
 ```
 out = odesolve(odefunc, x, options)
 ```
 
-# Mode 2: get the solver then evaluate it
+### Mode 2: get the solver then evaluate it
 ```
 solver = odesolve(odefunc, x, options, return_solver = True)
 out = solver.integrate(x, t_eval = option['t_eval'])
 ```
 
-# Mode 3: evaluate at different time points (new_t_eval) with dense mode
+### Mode 3: evaluate at different time points (new_t_eval) with dense mode
 ```
 options.update({'dense_output': True})
 solver = odesolve(odefunc, x, options, return_solver = True)
@@ -46,7 +46,7 @@ out = solver.integrate(x, t_eval = option['t_eval'])
 out2 = solver.evaluate_dense_mode(t_eval = new_t_eval)  
 ```
 solver.integrate performs integration and update dense states, solver.evaluate_dense_mode only evaluates without updating dense states
-```
+
 ### Parameters
 See https://github.com/juntang-zhuang/torch_ACA/blob/master/torch_ACA/odesolver/adaptive_grid_solver.py for a full list of parameters
 - ```method```: which ode solver. Fixed stepsize solvers include ['Euler','RK2','RK4'], adaptive stepsize solvers include ['RK12','RK23','RK45','Dopri5'] ('RK12' is also called 'HeunEuler' in the literature).
