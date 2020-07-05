@@ -27,18 +27,18 @@ options.update({'t_eval': [t0, t0 + (t1-t0)/10, ...  ,t1]})
 - t_eval should be a list of float type, specifying which time points for the solution to evaluate
 - x is a PyTorch tensor
 
-### Mode 1: directly get evaluated results
+#### Mode 1: directly get evaluated results
 ```
 out = odesolve(odefunc, x, options)
 ```
 
-### Mode 2: get the solver then evaluate it
+#### Mode 2: get the solver then evaluate it
 ```
 solver = odesolve(odefunc, x, options, return_solver = True)
 out = solver.integrate(x, t_eval = option['t_eval'])
 ```
 
-### Mode 3: evaluate at different time points (new_t_eval) with dense mode
+#### Mode 3: evaluate at different time points (new_t_eval) with dense mode
 ```
 options.update({'dense_output': True})
 solver = odesolve(odefunc, x, options, return_solver = True)
