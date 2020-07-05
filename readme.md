@@ -127,8 +127,8 @@ python test.py --method RK23 --rtol 1e-3 --atol 1e-3 --resume 'pre-trained weigh
   ```
   from torch_ACA.odesolver import odesolve
   options.update({'dense_output': True})
-  out, solver = odesolve(func, initial_condition, options=options)#, time_points=t_list)
-  # out_tmp is evaluated using a dense mode solution, without integrating
+  solver = odesolve(func, initial_condition, options=options, return_solver=True)#, time_points=t_list)
+  out = solver.integrate(initial_condition, t_eval=options['t_eval'])
   out_tmp = solver.evaluate_dense_mode(t_eval=options['t_eval'])
   print(torch.sum((out_tmp - out)**2))
   ```
