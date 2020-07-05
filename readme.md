@@ -38,7 +38,8 @@ out = solver.integrate(x, t_eval = option['t_eval'])
 options.update({'dense_output': True})
 solver = odesolve(odefunc, x, options, return_solver = True)
 out = solver.integrate(x, t_eval = option['t_eval'])
-out2 = solver.evaluate_dense_mode(t_eval = new_t_eval)
+out2 = solver.evaluate_dense_mode(t_eval = new_t_eval)  
+# solver.integrate performs integration and update dense states, solver.evaluate_dense_mode only evaluates without updating dense states
 ```
 ### Parameters
 See https://github.com/juntang-zhuang/torch_ACA/blob/master/torch_ACA/odesolver/adaptive_grid_solver.py for a full list of parameters
