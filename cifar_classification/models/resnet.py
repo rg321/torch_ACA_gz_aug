@@ -48,7 +48,7 @@ class BasicBlock2(nn.Module):
         self.shortcut = nn.Sequential()
 
     def forward(self,t, x):
-        self.nfe += 1
+        self.nfe = self.nfe + 1
         out = self.conv1(x)
         out = self.bn1(out)
         out = F.relu(out)
@@ -96,7 +96,9 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = F.relu(out)
         out = self.layer1_1(out)
         out = self.layer1_2(out)
         out = self.layer2_1(out)
