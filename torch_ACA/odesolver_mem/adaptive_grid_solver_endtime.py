@@ -153,7 +153,7 @@ class AdaptiveGridSolver(nn.Module):
 
     def delete_local_computation_graph(self, inputs):
         for i in inputs:
-            i.set_()
+            i.set()
             del i
         torch.cuda.empty_cache()
         return
@@ -443,7 +443,7 @@ class RK12(AdaptiveGridSolver):
 
     def step(self, func, t, dt, y, return_variables=False):
         func1_temp = func(t, y)
-        k1 = dt * func(t, y)
+        k1 = dt * func1_temp
         func2_temp = func(t + dt, y + 1.0 * k1)
         k2 = dt * func2_temp
         out1 = y + k1 * 0.5 + k2 * 0.5
