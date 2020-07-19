@@ -132,7 +132,7 @@ train_loader, test_loader, _ = get_galaxyZoo_loaders(batch_size=args.batch_size,
 if args.network == 'sqnxt':
     net = SqNxt_23_1x(10, ODEBlock)
 elif args.network == 'resnet':
-    net = ResNet18(ODEBlock)
+    net = ResNet18(ODEBlock, num_classes=20)
 
 net.apply(conv_init)
 print(net)

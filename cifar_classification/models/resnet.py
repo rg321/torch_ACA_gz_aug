@@ -103,7 +103,7 @@ class ResNet(nn.Module):
         out = self.linear(out)
         return out
 
-def ResNet18(ODEBlock):
-      return ResNet(BasicBlock, [2,2,2,2], ODEBlock_ = ODEBlock)
+def ResNet18(ODEBlock, num_classes=10):
+      return ResNet(BasicBlock, [2,2,2,2], ODEBlock_ = ODEBlock, num_classes=num_classes)
 
 
