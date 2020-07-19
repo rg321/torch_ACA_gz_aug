@@ -127,7 +127,7 @@ transform_test  = transforms.Compose([
 # train_loader = torch.utils.data.DataLoader(train_dataset, batch_size = batch_size, num_workers = 4, shuffle = True)
 # test_loader = torch.utils.data.DataLoader(test_dataset, batch_size = 128, num_workers = 4, shuffle = False)
 
-train_loader, test_loader, _ = get_galaxyZoo_loaders(batch_size=args.batch_size, test_batch_size=args.test_batch_size)
+train_loader, test_loader, train_dataset = get_galaxyZoo_loaders(batch_size=args.batch_size, test_batch_size=args.test_batch_size)
 
 if args.network == 'sqnxt':
     net = SqNxt_23_1x(10, ODEBlock)
