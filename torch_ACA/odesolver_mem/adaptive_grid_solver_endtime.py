@@ -153,7 +153,7 @@ class AdaptiveGridSolver(nn.Module):
 
     def delete_local_computation_graph(self, inputs):
         for i in inputs:
-            i.set()
+            i.set_()
             del i
         torch.cuda.empty_cache()
         return
