@@ -122,12 +122,12 @@ transform_test  = transforms.Compose([
     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
 ])
 
-# train_dataset = torchvision.datasets.CIFAR10(root='./data', transform = transform_train, train = True, download = True)
-# test_dataset = torchvision.datasets.CIFAR10(root='./data', transform = transform_test, train = False, download = True)
-# train_loader = torch.utils.data.DataLoader(train_dataset, batch_size = batch_size, num_workers = 4, shuffle = True)
-# test_loader = torch.utils.data.DataLoader(test_dataset, batch_size = 128, num_workers = 4, shuffle = False)
+train_dataset = torchvision.datasets.CIFAR10(root='./data', transform = transform_train, train = True, download = True)
+test_dataset = torchvision.datasets.CIFAR10(root='./data', transform = transform_test, train = False, download = True)
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size = batch_size, num_workers = 4, shuffle = True)
+test_loader = torch.utils.data.DataLoader(test_dataset, batch_size = 128, num_workers = 4, shuffle = False)
 
-train_loader, test_loader, train_dataset = get_galaxyZoo_loaders(batch_size=args.batch_size, test_batch_size=args.test_batch_size)
+# train_loader, test_loader, train_dataset = get_galaxyZoo_loaders(batch_size=args.batch_size, test_batch_size=args.test_batch_size)
 
 if args.network == 'sqnxt':
     net = SqNxt_23_1x(10, ODEBlock)
