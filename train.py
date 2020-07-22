@@ -248,6 +248,7 @@ def save_checkpoint(state, is_best, checkpoint='checkpoint', filename='checkpoin
 best_acc0 = 0.0
 best_acc1 = 0.0
 best_acc2 = 0.0
+best_total = 0.0
 
 if args.resume:
         # Load checkpoint.
@@ -258,6 +259,7 @@ if args.resume:
         best_acc0 = checkpoint['best_acc0']
         best_acc1 = checkpoint['best_acc1']
         best_acc2 = checkpoint['best_acc2']
+        best_total = checkpoint['best_total']
         start_epoch = checkpoint['epoch']
         net.load_state_dict(checkpoint['state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer'])
@@ -277,9 +279,10 @@ for _epoch in range(start_epoch, start_epoch + num_epochs):
     print('Epoch #%d Cost %ds' % (_epoch, end_time - start_time))
 
     # save model
-    is_best0 = test_acc[0] > best_acc0
-    is_best1 = test_acc[1] > best_acc1
-    is_best2 = test_acc[2] > best_acc2
+    is_best = sum(test_acc) > best_total
+    # is_best0 = test_acc[0] > best_acc0
+    # is_best1 = test_acc[1] > best_acc1
+    # is_best2 = test_acc[2] > best_acc2
     best_acc0 = max(test_acc[0], best_acc0)
     best_acc1 = max(test_acc[1], best_acc1)
     best_acc2 = max(test_acc[2], best_acc2)
@@ -292,8 +295,9 @@ for _epoch in range(start_epoch, start_epoch + num_epochs):
         'best_acc0': best_acc0,
         'best_acc1': best_acc1,
         'best_acc2': best_acc2,
+        'best_total': best_total,
         'optimizer': optimizer.state_dict(),
-    }, is_best0, is_best1, is_best2, checkpoint=args.checkpoint+'_'+args.method+'_'+args.network)
+    }, is_best, checkpoint=args.checkpoint+'_'+args.method+'_'+args.network)
 
 print('Best Acc0: %.4f' % (best_acc0 * 100))
 print('Best Acc1: %.4f' % (best_acc1 * 100))
