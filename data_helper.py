@@ -206,7 +206,7 @@ def get_galaxyZoo_loaders(batch_size=20, test_batch_size=20):
     # gz_root = '/content/drive/My Drive/imageFolder'
     gz_root = '/mnt/f/IITH/research/physics/galaxy_zoo/GalaxyClassification/imageFolder_small'
     gz_root = '/mnt/f/IITH/research/cs/mtvso_task/dataset'
-    # gz_root = '/home/nilesh/raghav/dataset'
+    gz_root = '/home/nilesh/raghav/mtvso_task/dataset'
 
     gz_dataset = datasets.ImageFolder(root=gz_root
             # ,train=True, download=True
