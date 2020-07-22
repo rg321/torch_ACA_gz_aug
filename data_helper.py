@@ -134,6 +134,36 @@ def get_cifar_loaders(batch_size=128, test_batch_size=1000):
 
     return train_loader, test_loader, None
 
+classes={'abandoned_building': 0,
+ 'awesome_night': 1,
+ 'calm_beach': 2,
+ 'clear_view': 3,
+ 'crying_baby': 4,
+ 'delicious_pie': 5,
+ 'empty_pool': 6,
+ 'fantastic_sunrise': 7,
+ 'funny_face': 8,
+ 'hardcore_techno': 9,
+ 'hurt_eyes': 10,
+ 'lost_car': 11,
+ 'nasty_bite': 12,
+ 'powerful_cars': 13,
+ 'rough_wall': 14,
+ 'shocking_surprise': 15,
+ 'strong_beer': 16,
+ 'tasty_cupcake': 17,
+ 'upset_kids': 18,
+ 'young_friends': 19}
+
+anp_classes=dict((v,k) for k,v in classes.items())
+
+cls=anp_classes.values()
+a=[x.split('_')[0] for x in cls]
+n=[x.split('_')[1] for x in cls]
+
+adj_classes=dict([(v,i) for i,v in enumerate(a)])
+noun_classes=dict([(v,i) for i,v in enumerate(n)])
+
 def get_galaxyZoo_loaders(batch_size=20, test_batch_size=20):
     from torch.utils.data.sampler import SubsetRandomSampler
     # batch_size=training_config['batch_size']
@@ -160,6 +190,11 @@ def get_galaxyZoo_loaders(batch_size=20, test_batch_size=20):
         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
     ])
 
+    def target_transform(x):
+        anp=anp_classes[x]
+        adj,noun=anp.split('_')
+        return classes[anp],adj_classes[adj],noun_classes[noun]
+
     # transform_test = transforms.Compose([
     #     transforms.Grayscale(num_output_channels=1),
     #     # transforms.CenterCrop((64,64)),
@@ -171,11 +206,12 @@ def get_galaxyZoo_loaders(batch_size=20, test_batch_size=20):
     # gz_root = '/content/drive/My Drive/imageFolder'
     gz_root = '/mnt/f/IITH/research/physics/galaxy_zoo/GalaxyClassification/imageFolder_small'
     gz_root = '/mnt/f/IITH/research/cs/mtvso_task/dataset'
-    gz_root = '/home/nilesh/raghav/dataset'
+    # gz_root = '/home/nilesh/raghav/dataset'
 
     gz_dataset = datasets.ImageFolder(root=gz_root
             # ,train=True, download=True
-            , transform=transform_train
+            , transform=transform_train,
+        target_transform=target_transform
         )
 
     # total_images = len(gz_dataset)

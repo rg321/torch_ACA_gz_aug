@@ -151,7 +151,9 @@ optimizer  = optim.SGD(net.parameters(), lr = args.lr, momentum = 0.9, weight_de
 def train(epoch):
     net.train()
     train_loss = 0
-    correct    = 0
+    correct0    = 0
+    correct1    = 0
+    correct2    = 0
     total      = 0
     
     print('Training Epoch: #%d, LR: %.4f'%(epoch, lr_schedule(lr, epoch)))
@@ -161,46 +163,70 @@ def train(epoch):
         optimizer.zero_grad()
         with torch.autograd.set_detect_anomaly(True):
             outputs = net(inputs)
-            loss = criterion(outputs, labels)
+            # loss = criterion(outputs, labels)
+            loss0 = criterion(outputs[0], labels[0])
+            loss1 = criterion(outputs[1], labels[1])
+            loss2 = criterion(outputs[2], labels[2])
+            loss = loss0+loss1+loss2
             loss.backward()
 
         optimizer.step()
         # writer.add_scalar('Train/Loss', loss.item(), epoch* 50000 + batch_size * (idx + 1)  )
         train_loss += loss.item()
-        _, predict = torch.max(outputs, 1)
-        total += labels.size(0)
-        correct += predict.eq(labels).cpu().sum().double()
+        _, predict0 = torch.max(outputs[0], 1)
+        _, predict1 = torch.max(outputs[1], 1)
+        _, predict2 = torch.max(outputs[2], 1)
+        total += labels[0].size(0)
+        # total += labels[1].size(0)
+        # total += labels[2].size(0)
+        correct0 += predict0.eq(labels[0]).cpu().sum().double()
+        correct1 += predict1.eq(labels[1]).cpu().sum().double()
+        correct2 += predict2.eq(labels[2]).cpu().sum().double()
         
         sys.stdout.write('\r')
-        sys.stdout.write('[%s] Training Epoch [%d/%d] Loss: %.4f Acc@1: %.3f'
+        sys.stdout.write('[%s] Training Epoch [%d/%d] Loss: %.4f Acc0: %.3f Acc1: %.3f Acc2: %.3f'
                         % (time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())),
                            epoch, num_epochs, 
                            # idx, len(train_dataset) // batch_size, 
-                          train_loss / (batch_size * (idx + 1)), correct / total))
+                          train_loss / (batch_size * (idx + 1)), 
+                          correct0 / total, correct1 / total, correct2 / total))
         sys.stdout.flush()
     # writer.add_scalar('Train/Accuracy', correct / total, epoch )
         
 def test(epoch):
     net.eval()
     test_loss = 0
-    correct = 0
+    correct0 = 0
+    correct1 = 0
+    correct2 = 0
     total = 0
     for idx, (inputs, labels) in enumerate(test_loader):
         if is_use_cuda:
             inputs, labels = inputs.cuda(), labels.cuda()
         outputs = net(inputs)
-        loss = criterion(outputs, labels)
+        # loss = criterion(outputs, labels)
+        loss0 = criterion(outputs[0], labels[0])
+        loss1 = criterion(outputs[1], labels[1])
+        loss2 = criterion(outputs[2], labels[2])
+        loss = loss0+loss1+loss2
         
         test_loss  += loss.item()
-        _, predict = torch.max(outputs, 1)
-        total += labels.size(0)
-        correct += predict.eq(labels).cpu().sum().double()
+        _, predict0 = torch.max(outputs[0], 1)
+        _, predict1 = torch.max(outputs[1], 1)
+        _, predict2 = torch.max(outputs[2], 1)
+        total += labels[0].size(0)
+        # total += labels[1].size(0)
+        # total += labels[2].size(0)
+        correct0 += predict0.eq(labels[0]).cpu().sum().double()
+        correct1 += predict1.eq(labels[1]).cpu().sum().double()
+        correct2 += predict2.eq(labels[2]).cpu().sum().double()
         # writer.add_scalar('Test/Loss', loss.item(), epoch* 50000 + test_loader.batch_size * (idx + 1)  )
         
         sys.stdout.write('\r')
-        sys.stdout.write('[%s] Testing Epoch  [%d/%d] Loss: %.4f Acc@1: %.3f'
+        sys.stdout.write('[%s] Testing Epoch  [%d/%d] Loss: %.4f Acc0: %.3f Acc1: %.3f Acc2: %.3f'
                         % (time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())),
-                           epoch, num_epochs, test_loss / (100 * (idx + 1)), correct / total))
+                           epoch, num_epochs, test_loss / (100 * (idx + 1)),
+                           correct0 / total, correct1 / total, correct2 / total))
         sys.stdout.flush()
 
     acc = correct / total

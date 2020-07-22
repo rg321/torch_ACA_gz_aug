@@ -93,7 +93,9 @@ class SqueezeNext(nn.Module):
         self.stage4_2 = self._make_layer2(blocks[3] - 1, width_x, 256, 1)
         self.conv2  = nn.Conv2d(int(width_x * self.in_channels), int(width_x * 128), 1, 1, bias = True)
         self.bn2    = nn.BatchNorm2d(int(width_x * 128))
-        self.linear = nn.Linear(int(width_x * 128), num_classes)
+        # self.linear = nn.Linear(int(width_x * 128), num_classes)
+        for i in range(3):
+            setattr(self, "linear%d" % i, nn.Linear(int(width_x * 128), num_classes))
         
     # with residual connection mismatch
     def _make_layer1(self, num_block, width_x, out_channels, stride):
@@ -127,8 +129,11 @@ class SqueezeNext(nn.Module):
         output = F.relu(self.bn2(self.conv2(output)))
         output = F.avg_pool2d(output, 4)
         output = output.view(output.size(0), -1)
-        output = self.linear(output)
-        return output
+        # output = self.linear(output)
+        outputs = []
+        for i in range(3):
+            outputs.append(getattr(self, "linear%d" % i)(output))
+        return outputs
     
 def SqNxt_23_1x(num_classes, ODEBlock):
     return SqueezeNext(1.0, [2, 2, 2, 2], num_classes, ODEBlock)
