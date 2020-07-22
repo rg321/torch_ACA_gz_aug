@@ -159,7 +159,7 @@ def train(epoch):
     print('Training Epoch: #%d, LR: %.4f'%(epoch, lr_schedule(lr, epoch)))
     for idx, (inputs, labels) in enumerate(train_loader):
         if is_use_cuda:
-            inputs, labels = inputs.cuda(), labels.cuda()
+            inputs, labels = inputs.cuda(), [l.cuda() for l in labels]
         optimizer.zero_grad()
         with torch.autograd.set_detect_anomaly(True):
             outputs = net(inputs)
@@ -202,7 +202,7 @@ def test(epoch):
     total = 0
     for idx, (inputs, labels) in enumerate(test_loader):
         if is_use_cuda:
-            inputs, labels = inputs.cuda(), labels.cuda()
+            inputs, labels = inputs.cuda(), [l.cuda() for l in labels]
         outputs = net(inputs)
         # loss = criterion(outputs, labels)
         loss0 = criterion(outputs[0], labels[0])
@@ -229,7 +229,7 @@ def test(epoch):
                            correct0 / total, correct1 / total, correct2 / total))
         sys.stdout.flush()
 
-    acc = correct / total
+    acc = [correct0 / total, correct1 / total, correct2 /total]
     # writer.add_scalar('Test/Accuracy', acc, epoch )
     return acc
 
@@ -245,7 +245,9 @@ def save_checkpoint(state, is_best, checkpoint='checkpoint', filename='checkpoin
     if is_best:
         shutil.copyfile(filepath, os.path.join(checkpoint, 'model_best.pth.tar'))
 
-best_acc = 0.0
+best_acc0 = 0.0
+best_acc1 = 0.0
+best_acc2 = 0.0
 
 if args.resume:
         # Load checkpoint.
@@ -253,7 +255,9 @@ if args.resume:
         assert os.path.isfile(args.resume), 'Error: no checkpoint directory found!'
         args.checkpoint = os.path.dirname(args.resume)
         checkpoint = torch.load(args.resume)
-        best_acc = checkpoint['best_acc']
+        best_acc0 = checkpoint['best_acc0']
+        best_acc1 = checkpoint['best_acc1']
+        best_acc2 = checkpoint['best_acc2']
         start_epoch = checkpoint['epoch']
         net.load_state_dict(checkpoint['state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer'])
@@ -273,15 +277,25 @@ for _epoch in range(start_epoch, start_epoch + num_epochs):
     print('Epoch #%d Cost %ds' % (_epoch, end_time - start_time))
 
     # save model
-    is_best = test_acc > best_acc
-    best_acc = max(test_acc, best_acc)
+    is_best0 = test_acc[0] > best_acc0
+    is_best1 = test_acc[1] > best_acc1
+    is_best2 = test_acc[2] > best_acc2
+    best_acc0 = max(test_acc[0], best_acc0)
+    best_acc1 = max(test_acc[1], best_acc1)
+    best_acc2 = max(test_acc[2], best_acc2)
     save_checkpoint({
         'epoch': _epoch + 1,
         'state_dict': net.state_dict(),
-        'acc': test_acc,
-        'best_acc': best_acc,
+        'acc0': test_acc[0],
+        'acc1': test_acc[1],
+        'acc2': test_acc[2],
+        'best_acc0': best_acc0,
+        'best_acc1': best_acc1,
+        'best_acc2': best_acc2,
         'optimizer': optimizer.state_dict(),
-    }, is_best, checkpoint=args.checkpoint+'_'+args.method+'_'+args.network)
+    }, is_best0, is_best1, is_best2, checkpoint=args.checkpoint+'_'+args.method+'_'+args.network)
 
-print('Best Acc@1: %.4f' % (best_acc * 100))
+print('Best Acc0: %.4f' % (best_acc0 * 100))
+print('Best Acc1: %.4f' % (best_acc1 * 100))
+print('Best Acc2: %.4f' % (best_acc2 * 100))
 # writer.close()
