@@ -21,6 +21,9 @@ from torch_ACA import odesolve_endtime as odesolve
 
 from data_helper import get_galaxyZoo_loaders
 
+from PIL import ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 def lr_schedule(lr, epoch):
     optim_factor = 0
@@ -131,7 +134,7 @@ transform_test  = transforms.Compose([
 train_loader, test_loader, train_dataset = get_galaxyZoo_loaders(batch_size=args.batch_size, test_batch_size=args.test_batch_size)
 
 if args.dataset == 'MTVSO':
-    num_classes = 20
+    num_classes = [100, 78, 79]
 else:
     num_classes = 10
 
