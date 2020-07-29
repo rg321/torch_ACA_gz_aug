@@ -78,7 +78,9 @@ class ResNet(nn.Module):
         self.layer4_1 = self._make_layer(512, 1, stride=2)
         self.layer4_2 = self._make_layer2(512, num_blocks[3]-1, stride=1)
 
-        self.linear = nn.Linear(512 * block.expansion, num_classes)
+        # self.linear = nn.Linear(512 * block.expansion, num_classes)
+        for i in range(3):
+            setattr(self, "linear%d" % i, nn.Linear(512 * block.expansion, num_classes))
 
     def _make_layer(self, planes, num_blocks, stride):
         strides = [stride] + [1] * (num_blocks-1)
@@ -109,10 +111,14 @@ class ResNet(nn.Module):
         out = self.layer4_2(out)
         out = F.avg_pool2d(out, 4)
         out = out.view(out.size(0), -1)
-        out = self.linear(out)
-        return out
+        # out = self.linear(out)
+        outputs = []
+        for i in range(3):
+            outputs.append(getattr(self, "linear%d" % i)(out))
+        return outputs
+        # return out
 
 def ResNet18(ODEBlock, num_classes=10):
-      return ResNet(BasicBlock, [2,2,2,2], ODEBlock_ = ODEBlock, num_classes=num_classes)
+      return ResNet(BasicBlock, [3, 4, 6, 3], ODEBlock_ = ODEBlock, num_classes=num_classes)
 
 

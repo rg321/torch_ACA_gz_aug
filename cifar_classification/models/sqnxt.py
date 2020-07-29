@@ -95,7 +95,7 @@ class SqueezeNext(nn.Module):
         self.bn2    = nn.BatchNorm2d(int(width_x * 128))
         # self.linear = nn.Linear(int(width_x * 128), num_classes)
         for i in range(3):
-            setattr(self, "linear%d" % i, nn.Linear(int(width_x * 128), num_classes))
+            setattr(self, "linear%d" % i, nn.Linear(int(width_x * 128), num_classes[i]))
         
     # with residual connection mismatch
     def _make_layer1(self, num_block, width_x, out_channels, stride):
