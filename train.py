@@ -25,20 +25,13 @@ from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-def lr_schedule(lr, epoch):
-    optim_factor = 0
-    if epoch > 60:
-        optim_factor = 2
-    elif epoch > 30:
-        optim_factor = 1
 
-    return lr / math.pow(10, (optim_factor))
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--network', type = str, choices = ['resnet', 'sqnxt'], default = 'resnet')
 parser.add_argument('--method', type = str, choices=['Euler', 'RK2', 'RK4','RK23','RK45','RK12','Dopri5'], default = 'RK12')
-parser.add_argument('--num_epochs', type = int, default = 50)
+parser.add_argument('--num_epochs', type = int, default = 25)
 parser.add_argument('--start_epoch', type = int, default = 0)
 # Checkpoints
 parser.add_argument('-c', '--checkpoint', default='./checkpoint', type=str, metavar='PATH',
@@ -74,6 +67,15 @@ batch_size   = int(args.batch_size)
 
 is_use_cuda = torch.cuda.is_available()
 device = torch.device("cuda:0" if is_use_cuda else "cpu")
+
+def lr_schedule(lr, epoch):
+    optim_factor = 0
+    if epoch > .8 * num_epochs:
+        optim_factor = 2
+    elif epoch > .6 * num_epochs:
+        optim_factor = 1
+
+    return lr / math.pow(10, (optim_factor))
 
 class ODEBlock(nn.Module):
 
