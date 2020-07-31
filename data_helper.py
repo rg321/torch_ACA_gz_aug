@@ -156,7 +156,8 @@ def form_classes(dataset_size='normal'):
     noun_classes=dict([(v,i) for i,v in enumerate(n)])
     return classes,anp_classes,adj_classes,noun_classes
 
-def get_galaxyZoo_loaders(batch_size=20, test_batch_size=20, dataset_size='normal'):
+def get_galaxyZoo_loaders(batch_size=20, test_batch_size=20,
+        dataset_size='normal', resize=400):
     from torch.utils.data.sampler import SubsetRandomSampler
     # batch_size=training_config['batch_size']
     # test_batch_size=training_config['test_batch_size']
@@ -183,7 +184,7 @@ def get_galaxyZoo_loaders(batch_size=20, test_batch_size=20, dataset_size='norma
     ])
     
     transform = transforms.Compose([
-        transforms.Resize((400,400)),
+        transforms.Resize((resize,resize)),
         transforms.ToTensor(),
         # transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
     ])

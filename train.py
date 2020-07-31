@@ -55,6 +55,7 @@ parser.add_argument('--dataset', type = str, choices = ['CIFAR10', 'GalaxyZoo', 
 parser.add_argument('--dataset_size', type = str, choices = ['small', 'normal', 'large'], default = 'normal')
 parser.add_argument('--crop_type', type = str, choices = ['center','random'], default = 'random')
 parser.add_argument('--crop_size', type = int, default = 32)
+parser.add_argument('--resize', type = int, default = 400)
 args = parser.parse_args()
 if args.network == 'sqnxt':
     from cifar_classification.models.sqnxt import SqNxt_23_1x
@@ -143,7 +144,8 @@ transform_test = transforms.Compose([
 # train_loader = torch.utils.data.DataLoader(train_dataset, batch_size = batch_size, num_workers = 4, shuffle = True)
 # test_loader = torch.utils.data.DataLoader(test_dataset, batch_size = 128, num_workers = 4, shuffle = False)
 
-train_loader, test_loader, train_dataset = get_galaxyZoo_loaders(batch_size=args.batch_size, test_batch_size=args.test_batch_size, dataset_size=args.dataset_size)
+train_loader, test_loader, train_dataset = get_galaxyZoo_loaders(batch_size=args.batch_size, test_batch_size=args.test_batch_size,
+    dataset_size=args.dataset_size, resize=args.resize)
 
 if args.dataset == 'MTVSO':
     if args.dataset_size=='normal':
