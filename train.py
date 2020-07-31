@@ -1,4 +1,5 @@
 
+
 import torch
 import time
 import torch.nn as nn
@@ -51,7 +52,7 @@ parser.add_argument('--neval_max', type=int, default = 50000, help='Maximum numb
 parser.add_argument('--batch_size', type = int, default = 20)
 parser.add_argument('--test_batch_size', type = int, default = 10)
 parser.add_argument('--dataset', type = str, choices = ['CIFAR10', 'GalaxyZoo', 'MTVSO'], default = 'CIFAR10')
-parser.add_argument('--dataset_size', type = str, choices = ['small', 'normal'], default = 'normal')
+parser.add_argument('--dataset_size', type = str, choices = ['small', 'normal', 'large'], default = 'normal')
 parser.add_argument('--crop_type', type = str, choices = ['center','random'], default = 'random')
 parser.add_argument('--crop_size', type = int, default = 32)
 args = parser.parse_args()
@@ -147,8 +148,10 @@ train_loader, test_loader, train_dataset = get_galaxyZoo_loaders(batch_size=args
 if args.dataset == 'MTVSO':
     if args.dataset_size=='normal':
         num_classes = [100, 78, 79]
-    else:
+    elif args.dataset_size=='small':
         num_classes = [20, 20, 20]
+    else:
+        num_classes = [1554, 213, 356]
 else:
     num_classes = 10
 
@@ -234,7 +237,6 @@ def test(epoch):
         loss = loss0+loss1+loss2
         
         test_loss  += loss.item()
-        train_loss += loss.item()
         _, predict0 = torch.max(outputs[0], 1)
         _, predict1 = torch.max(outputs[1], 1)
         _, predict2 = torch.max(outputs[2], 1)
