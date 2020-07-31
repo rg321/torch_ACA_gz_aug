@@ -5,6 +5,8 @@ from torch.utils.data import DataLoader
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 
+from config import classes_100, classes_20
+
 class DataHelper():
     def __init__(self, sequence_max_length=1024):
         self.alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789-,;.!?:’"/|_#$%ˆ&*˜‘+=<>()[]{} '
@@ -134,117 +136,24 @@ def get_cifar_loaders(batch_size=128, test_batch_size=1000):
 
     return train_loader, test_loader, None
 
-classes={'adorable_face': 0,
- 'amazing_cars': 1,
- 'attractive_lady': 2,
- 'awesome_animals': 3,
- 'awesome_nature': 4,
- 'awesome_scene': 5,
- 'bad_graffiti': 6,
- 'bright_lights': 7,
- 'bright_rainbow': 8,
- 'busy_city': 9,
- 'calm_ocean': 10,
- 'calm_street': 11,
- 'candid_girls': 12,
- 'charming_smile': 13,
- 'christian_festival': 14,
- 'classic_architecture': 15,
- 'clean_water': 16,
- 'colorful_autumn': 17,
- 'crazy_rain': 18,
- 'crazy_storm': 19,
- 'crowded_city': 20,
- 'crying_child': 21,
- 'cute_face': 22,
- 'dark_shadows': 23,
- 'dark_tower': 24,
- 'dead_end': 25,
- 'deadly_fire': 26,
- 'dry_winter': 27,
- 'dusty_glasses': 28,
- 'empty_room': 29,
- 'empty_street': 30,
- 'evil_dog': 31,
- 'evil_robot': 32,
- 'excited_girls': 33,
- 'fantastic_city': 34,
- 'fluffy_cat': 35,
- 'fluffy_puppy': 36,
- 'fresh_flowers': 37,
- 'friendly_dog': 38,
- 'friendly_smile': 39,
- 'frightened_child': 40,
- 'golden_dragon': 41,
- 'gorgeous_dress': 42,
- 'great_reflection': 43,
- 'great_sky': 44,
- 'great_street': 45,
- 'happy_baby': 46,
- 'happy_christmas': 47,
- 'happy_dog': 48,
- 'hardcore_band': 49,
- 'hardcore_terror': 50,
- 'healthy_teeth': 51,
- 'heavy_storm': 52,
- 'holy_mountains': 53,
- 'horrible_monster': 54,
- 'hot_pot': 55,
- 'incredible_city': 56,
- 'innocent_eyes': 57,
- 'inspirational_bible': 58,
- 'laughing_children': 59,
- 'lazy_morning': 60,
- 'lonely_island': 61,
- 'lost_dog': 62,
- 'lost_weight': 63,
- 'lovely_autumn': 64,
- 'misty_morning': 65,
- 'nasty_spider': 66,
- 'noisy_bird': 67,
- 'playful_cats': 68,
- 'poor_cat': 69,
- 'powerful_waves': 70,
- 'proud_student': 71,
- 'rainy_forest': 72,
- 'relaxing_beach': 73,
- 'relaxing_evening': 74,
- 'relaxing_hotel': 75,
- 'rotten_apple': 76,
- 'scary_eyes': 77,
- 'scary_zombie': 78,
- 'screaming_baby': 79,
- 'screaming_face': 80,
- 'sexy_blonde': 81,
- 'silly_kids': 82,
- 'silly_toys': 83,
- 'slippery_snow': 84,
- 'smooth_curves': 85,
- 'strange_building': 86,
- 'stunning_sunset': 87,
- 'stupid_pet': 88,
- 'super_star': 89,
- 'tasty_chocolate': 90,
- 'tiny_dog': 91,
- 'traditional_farm': 92,
- 'traveling_magazine': 93,
- 'ugly_fly': 94,
- 'ugly_wall': 95,
- 'weird_alien': 96,
- 'wet_cat': 97,
- 'wild_hair': 98,
- 'yummy_food': 99}
+# classes = classes_100
+def form_classes(dataset_size='normal'):
+    if dataset_size=='normal':
+        classes = classes_100
+    else:
+        classes = classes_20
 
-anp_classes=dict((v,k) for k,v in classes.items())
+    anp_classes=dict((v,k) for k,v in classes.items())
 
-cls=anp_classes.values()
-a=set([x.split('_')[0] for x in cls])
-n=set([x.split('_')[1] for x in cls])
+    cls=anp_classes.values()
+    a=set([x.split('_')[0] for x in cls])
+    n=set([x.split('_')[1] for x in cls])
 
-adj_classes=dict([(v,i) for i,v in enumerate(a)])
-noun_classes=dict([(v,i) for i,v in enumerate(n)])
+    adj_classes=dict([(v,i) for i,v in enumerate(a)])
+    noun_classes=dict([(v,i) for i,v in enumerate(n)])
+    return classes,anp_classes,adj_classes,noun_classes
 
-def get_galaxyZoo_loaders(batch_size=20, test_batch_size=20):
+def get_galaxyZoo_loaders(batch_size=20, test_batch_size=20, dataset_size='normal'):
     from torch.utils.data.sampler import SubsetRandomSampler
     # batch_size=training_config['batch_size']
     # test_batch_size=training_config['test_batch_size']
@@ -269,6 +178,14 @@ def get_galaxyZoo_loaders(batch_size=20, test_batch_size=20):
         transforms.ToTensor(),
         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
     ])
+    
+    transform = transforms.Compose([
+        transforms.Resize((400,400)),
+        transforms.ToTensor(),
+        # transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+
+    classes,anp_classes,adj_classes,noun_classes=form_classes(dataset_size)
 
     def target_transform(x):
         anp=anp_classes[x]
@@ -286,11 +203,15 @@ def get_galaxyZoo_loaders(batch_size=20, test_batch_size=20):
     # gz_root = '/content/drive/My Drive/imageFolder'
     gz_root = '/mnt/f/IITH/research/physics/galaxy_zoo/GalaxyClassification/imageFolder_small'
     gz_root = '/mnt/f/IITH/research/cs/mtvso_task/dataset'
-    gz_root = '/home/nilesh/raghav/mtvso_task/dataset'
+    if dataset_size=='normal':
+        gz_root = '/home/nilesh/raghav/mtvso_task/dataset'
+    else:
+        gz_root = '/home/nilesh/raghav/mtvso_task/vso_dataset_20c_80i'
+
 
     gz_dataset = datasets.ImageFolder(root=gz_root
             # ,train=True, download=True
-            , transform=transform_train,
+            , transform=transform,
         target_transform=target_transform
         )
 

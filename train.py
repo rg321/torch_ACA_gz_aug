@@ -51,6 +51,9 @@ parser.add_argument('--neval_max', type=int, default = 50000, help='Maximum numb
 parser.add_argument('--batch_size', type = int, default = 20)
 parser.add_argument('--test_batch_size', type = int, default = 10)
 parser.add_argument('--dataset', type = str, choices = ['CIFAR10', 'GalaxyZoo', 'MTVSO'], default = 'CIFAR10')
+parser.add_argument('--dataset_size', type = str, choices = ['small', 'normal'], default = 'normal')
+parser.add_argument('--crop_type', type = str, choices = ['center','random'], default = 'random')
+parser.add_argument('--crop_size', type = int, default = 32)
 args = parser.parse_args()
 if args.network == 'sqnxt':
     from cifar_classification.models.sqnxt import SqNxt_23_1x
@@ -116,16 +119,22 @@ def conv_init(m):
         
 
 # Data Preprocess
-transform_train = transforms.Compose([
-    transforms.RandomCrop(32, padding = 4),
-    transforms.RandomHorizontalFlip(),
-    transforms.ToTensor(),
-    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-])
+if args.crop_type == 'center':
+    transform_crop = transforms.CenterCrop(args.crop_size)
+else:
+    transform_crop = transforms.RandomCrop(args.crop_size, padding=4)
 
-transform_test  = transforms.Compose([
+transform_train = transforms.Compose([
+        transform_crop,
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+
+transform_test = transforms.Compose([
+    transforms.CenterCrop(args.crop_size),
     transforms.ToTensor(),
-    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
 ])
 
 # train_dataset = torchvision.datasets.CIFAR10(root='./data', transform = transform_train, train = True, download = True)
@@ -133,10 +142,13 @@ transform_test  = transforms.Compose([
 # train_loader = torch.utils.data.DataLoader(train_dataset, batch_size = batch_size, num_workers = 4, shuffle = True)
 # test_loader = torch.utils.data.DataLoader(test_dataset, batch_size = 128, num_workers = 4, shuffle = False)
 
-train_loader, test_loader, train_dataset = get_galaxyZoo_loaders(batch_size=args.batch_size, test_batch_size=args.test_batch_size)
+train_loader, test_loader, train_dataset = get_galaxyZoo_loaders(batch_size=args.batch_size, test_batch_size=args.test_batch_size, dataset_size=args.dataset_size)
 
 if args.dataset == 'MTVSO':
-    num_classes = [100, 78, 79]
+    if args.dataset_size=='normal':
+        num_classes = [100, 78, 79]
+    else:
+        num_classes = [20, 20, 20]
 else:
     num_classes = 10
 
@@ -164,6 +176,9 @@ def train(epoch):
     print('Training Epoch: #%d, LR: %.4f'%(epoch, lr_schedule(lr, epoch)))
     for idx, (inputs, labels) in enumerate(train_loader):
         if is_use_cuda:
+            inputs=[transforms.ToPILImage()(inpu) for inpu in inputs]
+            inputs=[transform_train(inpu) for inpu in inputs]
+            inputs=torch.stack(inputs)
             inputs, labels = inputs.cuda(), [l.cuda() for l in labels]
         optimizer.zero_grad()
         with torch.autograd.set_detect_anomaly(True):
@@ -207,6 +222,9 @@ def test(epoch):
     total = 0
     for idx, (inputs, labels) in enumerate(test_loader):
         if is_use_cuda:
+            inputs=[transforms.ToPILImage()(inpu) for inpu in inputs]
+            inputs=[transform_test(inpu) for inpu in inputs]
+            inputs=torch.stack(inputs)
             inputs, labels = inputs.cuda(), [l.cuda() for l in labels]
         outputs = net(inputs)
         # loss = criterion(outputs, labels)
