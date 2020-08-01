@@ -30,7 +30,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--network', type = str, choices = ['resnet', 'sqnxt'], default = 'resnet')
+parser.add_argument('--network', type = str, choices = ['resnet', 'sqnxt'], default = 'sqnxt')
 parser.add_argument('--method', type = str, choices=['Euler', 'RK2', 'RK4','RK23','RK45','RK12','Dopri5'], default = 'RK12')
 parser.add_argument('--num_epochs', type = int, default = 25)
 parser.add_argument('--start_epoch', type = int, default = 0)
@@ -51,7 +51,7 @@ parser.add_argument('--neval_max', type=int, default = 50000, help='Maximum numb
 
 parser.add_argument('--batch_size', type = int, default = 20)
 parser.add_argument('--test_batch_size', type = int, default = 10)
-parser.add_argument('--dataset', type = str, choices = ['CIFAR10', 'GalaxyZoo', 'MTVSO'], default = 'CIFAR10')
+parser.add_argument('--dataset', type = str, choices = ['CIFAR10', 'GalaxyZoo', 'MTVSO'], default = 'MTVSO')
 parser.add_argument('--dataset_size', type = str, choices = ['small', 'normal', 'large'], default = 'normal')
 parser.add_argument('--crop_type', type = str, choices = ['center','random'], default = 'random')
 parser.add_argument('--crop_size', type = int, default = 32)
