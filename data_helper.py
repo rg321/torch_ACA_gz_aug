@@ -212,7 +212,7 @@ def get_galaxyZoo_loaders(batch_size=20, test_batch_size=20,
     elif dataset_size=='small':
         gz_root = '/home/nilesh/raghav/mtvso_task/vso_dataset_20c_80i'
     else:
-        gz_root = '/home/nilesh/raghav/mtvso_task/bi_concepts1553'
+        gz_root = '/raid/cs19mtech11019/bi_concepts1553'
 
     gz_dataset = datasets.ImageFolder(root=gz_root
             # ,train=True, download=True
