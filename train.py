@@ -52,10 +52,10 @@ parser.add_argument('--neval_max', type=int, default = 50000, help='Maximum numb
 parser.add_argument('--batch_size', type = int, default = 20)
 parser.add_argument('--test_batch_size', type = int, default = 10)
 parser.add_argument('--dataset', type = str, choices = ['CIFAR10', 'GalaxyZoo', 'MTVSO'], default = 'MTVSO')
-parser.add_argument('--dataset_size', type = str, choices = ['small', 'normal', 'large'], default = 'normal')
-parser.add_argument('--crop_type', type = str, choices = ['center','random'], default = 'random')
+parser.add_argument('--dataset_size', type = str, choices = ['small', 'smallFull', 'normal', 'large'], default = 'normal')
+parser.add_argument('--crop_type', type = str, choices = ['center','random'], default = 'center')
 parser.add_argument('--crop_size', type = int, default = 32)
-parser.add_argument('--resize', type = int, default = 400)
+parser.add_argument('--resize', type = int, default = 32)
 args = parser.parse_args()
 if args.network == 'sqnxt':
     from cifar_classification.models.sqnxt import SqNxt_23_1x

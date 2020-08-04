@@ -93,6 +93,8 @@ class SqueezeNext(nn.Module):
         self.stage4_2 = self._make_layer2(blocks[3] - 1, width_x, 256, 1)
         self.conv2  = nn.Conv2d(int(width_x * self.in_channels), int(width_x * 128), 1, 1, bias = True)
         self.bn2    = nn.BatchNorm2d(int(width_x * 128))
+        self.conv3  = nn.Conv2d(int(width_x * 128), int(width_x * 128), 1, 1, bias = True)
+        self.bn3    = nn.BatchNorm2d(int(width_x * 128))
         # self.linear = nn.Linear(int(width_x * 128), num_classes)
         for i in range(3):
             setattr(self, "linear%d" % i, nn.Linear(int(width_x * 128), num_classes[i]))
@@ -126,13 +128,16 @@ class SqueezeNext(nn.Module):
         output = self.stage3_2(output)
         output = self.stage4_1(output)
         output = self.stage4_2(output)
-        output = F.relu(self.bn2(self.conv2(output)))
-        output = F.avg_pool2d(output, 4)
-        output = output.view(output.size(0), -1)
+        # output = F.relu(self.bn2(self.conv2(output)))
+        # output = F.avg_pool2d(output, 4)
+        # output = output.view(output.size(0), -1)
         # output = self.linear(output)
         outputs = []
         for i in range(3):
-            outputs.append(getattr(self, "linear%d" % i)(output))
+            o= F.relu(self.bn2(self.conv2(output)))
+            o= F.avg_pool2d(o, 4)
+            o= o.view(o.size(0), -1)
+            outputs.append(getattr(self, "linear%d" % i)(o))
         return outputs
     
 def SqNxt_23_1x(num_classes, ODEBlock):

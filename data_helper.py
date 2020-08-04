@@ -211,6 +211,8 @@ def get_galaxyZoo_loaders(batch_size=20, test_batch_size=20,
         gz_root = '/home/nilesh/raghav/mtvso_task/dataset'
     elif dataset_size=='small':
         gz_root = '/home/nilesh/raghav/mtvso_task/vso_dataset_20c_80i'
+    elif dataset_size=='smallFull':
+        gz_root = '/home/nilesh/raghav/mtvso_task/vso_dataset_20c_240i'
     else:
         gz_root = '/raid/cs19mtech11019/bi_concepts1553'
 
