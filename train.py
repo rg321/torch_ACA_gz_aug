@@ -153,7 +153,7 @@ if args.dataset == 'MTVSO':
     elif args.dataset_size=='small':
         num_classes = [20, 20, 20]
     else:
-        num_classes = [1554, 213, 356]
+        num_classes = [581, 123, 221]
 else:
     num_classes = 10
 

@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 
-from config import classes_100, classes_20, classes_1554
+from config import classes_100, classes_20, classes_1554, classes_581
 
 class DataHelper():
     def __init__(self, sequence_max_length=1024):
@@ -140,10 +140,10 @@ def get_cifar_loaders(batch_size=128, test_batch_size=1000):
 def form_classes(dataset_size='normal'):
     if dataset_size=='normal':
         classes = classes_100
-    elif dataset_size=='small':
-        classes = classes_20
+    elif dataset_size=='large':
+        classes = classes_581
     else:
-        classes = classes_1554
+        classes = classes_20
 
 
     anp_classes=dict((v,k) for k,v in classes.items())
