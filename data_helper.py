@@ -5,6 +5,8 @@ from torch.utils.data import DataLoader
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 
+from config import classes_100, classes_20, classes_1554, classes_581
+
 class DataHelper():
     def __init__(self, sequence_max_length=1024):
         self.alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789-,;.!?:’"/|_#$%ˆ&*˜‘+=<>()[]{} '
@@ -134,7 +136,29 @@ def get_cifar_loaders(batch_size=128, test_batch_size=1000):
 
     return train_loader, test_loader, None
 
-def get_galaxyZoo_loaders(batch_size=20, test_batch_size=20):
+# classes = classes_100
+def form_classes(dataset_size='normal'):
+    if dataset_size=='normal':
+        classes = classes_100
+    elif dataset_size=='large':
+        classes = classes_581
+    else:
+        classes = classes_20
+
+
+    anp_classes=dict((v,k) for k,v in classes.items())
+
+    cls=anp_classes.values()
+    a=set([x.split('_')[0] for x in cls])
+    n=set([x.split('_')[1] for x in cls])
+
+    adj_classes=dict([(v,i) for i,v in enumerate(a)])
+    noun_classes=dict([(v,i) for i,v in enumerate(n)])
+    return classes,anp_classes,adj_classes,noun_classes
+
+def get_galaxyZoo_loaders(batch_size=20, test_batch_size=20,
+        dataset_size='normal', resize=400, network='sqnxt', dataset_type='anp',
+        dataset_source='server_main'):
     from torch.utils.data.sampler import SubsetRandomSampler
     # batch_size=training_config['batch_size']
     # test_batch_size=training_config['test_batch_size']
@@ -159,6 +183,24 @@ def get_galaxyZoo_loaders(batch_size=20, test_batch_size=20):
         transforms.ToTensor(),
         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
     ])
+    
+    transform = transforms.Compose([
+        transforms.Resize((resize,resize)),
+        transforms.ToTensor(),
+        # transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+
+    classes,anp_classes,adj_classes,noun_classes=form_classes(dataset_size)
+
+    def target_transform(x):
+        anp=anp_classes[x]
+        adj,noun=anp.split('_')
+        if network in ('sqnxt','resnet'): 
+            return classes[anp],adj_classes[adj],noun_classes[noun]
+        else:
+            if dataset_type == 'anp': return classes[anp]
+            elif dataset_type == 'adj': return adj_classes[adj]
+            elif dataset_type == 'noun': return noun_classes[noun]
 
     # transform_test = transforms.Compose([
     #     transforms.Grayscale(num_output_channels=1),
@@ -169,13 +211,26 @@ def get_galaxyZoo_loaders(batch_size=20, test_batch_size=20):
 
     # gz_root = '/home/cs19mtech11019/cs19mtech11024/imageFolder'
     # gz_root = '/content/drive/My Drive/imageFolder'
-    gz_root = '/mnt/f/IITH/research/physics/galaxy_zoo/GalaxyClassification/imageFolder_small'
-    gz_root = '/mnt/f/IITH/research/cs/mtvso_task/dataset'
-    gz_root = '/home/nilesh/raghav/mtvso_task/dataset'
+    if dataset_source == 'local': root = '/mnt/f/IITH/research/cs/'
+    elif dataset_source == 'server_main': root = '/home/cs19mtech11019/cs19mtech11024/'
+    elif dataset_source == 'server_nilesh': root = '/home/nilesh/raghav/'
+
+
+    # gz_root = '/mnt/f/IITH/research/physics/galaxy_zoo/GalaxyClassification/imageFolder_small'
+    gz_root = 'dataset'
+    if dataset_size=='normal':
+        gz_root = root + 'mtvso_task/dataset'
+    elif dataset_size=='small':
+        gz_root = root + 'mtvso_task/vso_dataset_20c_80i'
+    elif dataset_size=='smallFull':
+        gz_root = root + 'mtvso_task/vso_dataset_20c_240i'
+    else:
+        gz_root = '/raid/cs19mtech11019/bi_concepts1553'
 
     gz_dataset = datasets.ImageFolder(root=gz_root
             # ,train=True, download=True
-            , transform=transform_train
+            , transform=transform,
+        target_transform=target_transform
         )
 
     # total_images = len(gz_dataset)
@@ -185,7 +240,7 @@ def get_galaxyZoo_loaders(batch_size=20, test_batch_size=20):
     #     int(0.1*total_images)
     # ])
 
-    split = .8
+    split = .9
     shuffle_dataset = True
     random_seed= 42
 
