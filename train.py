@@ -154,10 +154,10 @@ train_loader, test_loader, train_dataset = get_galaxyZoo_loaders(batch_size=args
 if args.dataset == 'MTVSO':
     if args.dataset_size=='normal':
         num_classes = [100, 78, 79]
-    elif args.dataset_size=='small':
-        num_classes = [20, 20, 20]
-    else:
+    elif args.dataset_size=='large':
         num_classes = [581, 123, 221]
+    else:
+        num_classes = [20, 20, 20]
 else:
     num_classes = 10
 
