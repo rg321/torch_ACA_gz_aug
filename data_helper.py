@@ -227,6 +227,8 @@ def get_galaxyZoo_loaders(batch_size=20, test_batch_size=20,
     else:
         gz_root = '/raid/cs19mtech11019/bi_concepts1553'
 
+    gz_root = '/raid/cs19mtech11019/' + 'imageFolder'
+
     gz_dataset = datasets.ImageFolder(root=gz_root
             # ,train=True, download=True
             , transform=transform,
@@ -274,6 +276,61 @@ def get_galaxyZoo_loaders(batch_size=20, test_batch_size=20,
         shuffle=False, num_workers=1, drop_last=True
         ,sampler=test_sampler
     )
+
+    return train_loader, test_loader, gz_dataset
+
+def galaxy_zoo(batch_size=20, test_batch_size=20,
+        dataset_size='normal', resize=400, crop_size=424, network='sqnxt', dataset_type='anp',
+        dataset_source='server_main'):
+    # batch_size=20, test_batch_size=20,
+    #     dataset_size='normal', resize=400, network='sqnxt', dataset_type='anp',
+    #     dataset_source='server_main'
+    from torch.utils.data.sampler import SubsetRandomSampler
+    # batch_size=training_config['batch_size']
+    # test_batch_size=training_config['test_batch_size']
+    # resize=training_config['img_size']
+    # crop_size=training_config['crop_size']
+    transform_train = transforms.Compose([
+            # transforms.Grayscale(num_output_channels=1),
+            transforms.CenterCrop((crop_size,crop_size)),
+            transforms.Resize(resize),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5,), (0.5,)),
+        ])
+
+    gz_root = '/raid/cs19mtech11019/' + 'imageFolder'
+    
+    gz_dataset = datasets.ImageFolder(root=gz_root
+        ,transform=transform_train)
+
+    split_1 = .9
+    split_2 = .1
+    shuffle_dataset = True
+    random_seed= 42
+
+    # Creating data indices for training and validation splits:
+    dataset_size = len(gz_dataset)
+    indices = list(range(dataset_size))
+    split_1 = int(np.floor(split_1 * dataset_size))
+    split_2 = int(np.floor(split_2 * dataset_size))
+    if shuffle_dataset :
+        np.random.seed(random_seed)
+        np.random.shuffle(indices)
+    train_indices, eval_indices, test_indices = indices[:split_1], indices[split_1:(split_1+split_2)], indices[(split_1):]
+
+    # Creating PT data samplers and loaders:
+    train_sampler = SubsetRandomSampler(train_indices)
+    eval_sampler = SubsetRandomSampler(eval_indices)
+    test_sampler = SubsetRandomSampler(test_indices)
+
+    train_loader = DataLoader(gz_dataset
+        ,batch_size=batch_size, shuffle=False, num_workers=1, drop_last=True, sampler=train_sampler)
+
+    eval_loader = DataLoader(gz_dataset
+        ,batch_size=test_batch_size, shuffle=False, num_workers=1, drop_last=True, sampler=eval_sampler)
+
+    test_loader = DataLoader(gz_dataset
+        ,batch_size=test_batch_size, shuffle=False, num_workers=1, drop_last=True, sampler=test_sampler)
 
     return train_loader, test_loader, gz_dataset
 
