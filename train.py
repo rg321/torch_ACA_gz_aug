@@ -23,23 +23,25 @@ import os
 import shutil
 from torch_ACA import odesolve_endtime as odesolve
 
-from data_helper import get_galaxyZoo_loaders, galaxy_zoo
+from data_helper import get_galaxyzoo_loaders, get_mtvso_loaders, tiny_imagenet
 
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-# os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2'
+# os.environ['CUDA_VISIBLE_DEVICES'] = ''
+# os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+# os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3,4,5'
 
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--network', type = str, choices = ['resnet', 'sqnxt', 'pytorch_resnet50_single'], default = 'resnet')
 parser.add_argument('--method', type = str, choices=['Euler', 'RK2', 'RK4','RK23','RK45','RK12','Dopri5'], default = 'RK12')
-parser.add_argument('--dataset', type = str, choices = ['CIFAR10', 'GALAXYZOO', 'MTVSO'], default = 'CIFAR10')
+parser.add_argument('--dataset', type = str, choices = ['cifar10', 'galaxyzoo', 'mtvso', 'tiny_imagenet'], default = 'tiny_imagenet')
 parser.add_argument('--dataset_type', type = str, choices = ['anp', 'adj', 'noun'], default = 'anp')
-parser.add_argument('--dataset_source', type = str, choices = ['local', 'server_main', 'server_nilesh'], default = 'server_nilesh')
+parser.add_argument('--dataset_source', type = str, choices = ['local', 'server_main', 'server_nilesh', 'server_other'], default = 'server_main')
 parser.add_argument('--dataset_size', type = str, choices = ['small', 'smallFull', 'normal', 'large'], default = 'normal')
-parser.add_argument('--num_epochs', type = int, default = 25)
+parser.add_argument('--num_epochs', type = int, default = 15)
 parser.add_argument('--start_epoch', type = int, default = 0)
 # Checkpoints
 parser.add_argument('-c', '--checkpoint', default='./checkpoint', type=str, metavar='PATH',
@@ -61,6 +63,7 @@ parser.add_argument('--test_batch_size', type = int, default = 10)
 parser.add_argument('--crop_type', type = str, choices = ['center','random'], default = 'center')
 parser.add_argument('--crop_size', type = int, default = 32)
 parser.add_argument('--resize', type = int, default = 32)
+parser.add_argument('--augment_dim', type = int, default = 0)
 args = parser.parse_args()
 if args.network == 'sqnxt':
     from cifar_classification.models.sqnxt import SqNxt_23_1x
@@ -126,22 +129,23 @@ def conv_init(m):
         
 
 # Data Preprocess
-transform_train = transforms.Compose([
-    transforms.RandomCrop(32, padding = 4),
-    transforms.RandomHorizontalFlip(),
-    transforms.ToTensor(),
-    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-])
+if args.dataset == 'cifar10':
+    transform_train = transforms.Compose([
+        transforms.RandomCrop(32, padding = 4),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+    ])
 
-transform_test  = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-])
+    transform_test  = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+    ])
 
-train_dataset = torchvision.datasets.CIFAR10(root='./data', transform = transform_train, train = True, download = True)
-test_dataset = torchvision.datasets.CIFAR10(root='./data', transform = transform_test, train = False, download = True)
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size = args.batch_size, num_workers = 4, shuffle = True)
-test_loader = torch.utils.data.DataLoader(test_dataset, batch_size = args.test_batch_size, num_workers = 4, shuffle = False)
+    train_dataset = torchvision.datasets.CIFAR10(root='./data', transform = transform_train, train = True, download = True)
+    test_dataset = torchvision.datasets.CIFAR10(root='./data', transform = transform_test, train = False, download = True)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size = args.batch_size, num_workers = 4, shuffle = True)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size = args.test_batch_size, num_workers = 4, shuffle = False)
 
 # if args.crop_type == 'center':
 #     transform_crop = transforms.CenterCrop(args.crop_size)
@@ -160,12 +164,15 @@ test_loader = torch.utils.data.DataLoader(test_dataset, batch_size = args.test_b
 #     transforms.ToTensor(),
 #     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
 # ])
+elif args.dataset == 'galaxyzoo':
+    train_loader, test_loader, train_dataset = galaxy_zoo(batch_size=args.batch_size, test_batch_size=args.test_batch_size,
+        dataset_size=args.dataset_size, resize=args.resize, network=args.network, dataset_type=args.dataset_type,
+        dataset_source=args.dataset_source)
+elif args.dataset == 'tiny_imagenet':
+    train_loader, test_loader, train_dataset = tiny_imagenet(batch_size=args.batch_size, test_batch_size=args.test_batch_size,
+        resize=args.resize, dataset_source=args.dataset_source)
 
-# train_loader, test_loader, train_dataset = galaxy_zoo(batch_size=args.batch_size, test_batch_size=args.test_batch_size,
-#     dataset_size=args.dataset_size, resize=args.resize, network=args.network, dataset_type=args.dataset_type,
-#     dataset_source=args.dataset_source)
-
-if args.dataset == 'MTVSO':
+if args.dataset == 'mtvso':
     # if args.dataset_size=='normal':
     #     num_classes = [100, 78, 79]
     # elif args.dataset_size=='large':
@@ -179,10 +186,12 @@ if args.dataset == 'MTVSO':
             num_classes=num_classes[1]
         elif args.dataset_type == 'noun':
             num_classes=num_classes[2]
-elif args.dataset == 'GALAXYZOO':
+elif args.dataset == 'galaxyzoo':
     num_classes = 5
-elif args.dataset == 'CIFAR10':
+elif args.dataset == 'cifar10':
     num_classes = 10
+elif args.dataset == 'tiny_imagenet':
+    num_classes = 200
 
 
 """here is model definition fff"""
@@ -190,7 +199,7 @@ elif args.dataset == 'CIFAR10':
 if args.network == 'sqnxt':
     net = SqNxt_23_1x(num_classes, ODEBlock)
 elif args.network == 'resnet':
-    net = ResNet18(ODEBlock, device, num_classes=num_classes)
+    net = ResNet18(ODEBlock, device, num_classes=num_classes, augment_dim=args.augment_dim)
 elif args.network == 'pytorch_resnet50_single':
     # if args.dataset_type == 'anp':
     #     num_classes=num_classes[0]
@@ -230,6 +239,7 @@ def train(epoch):
             inputs, labels = inputs.cuda(), labels.cuda()
         optimizer.zero_grad()
         with torch.autograd.set_detect_anomaly(True):
+            # import pdb; pdb.set_trace()
             outputs = net(inputs).cuda()
             loss = criterion(outputs, labels)
             loss.backward()
