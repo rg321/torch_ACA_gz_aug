@@ -1,9 +1,12 @@
+import glob
 import csv
 import numpy as np
+import imageio
 
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
+from torch.utils.data.sampler import SubsetRandomSampler
 
 from config import classes_100, classes_20, classes_1554, classes_581
 
@@ -136,6 +139,100 @@ def get_cifar_loaders(batch_size=128, test_batch_size=1000):
 
     return train_loader, test_loader, None
 
+def tiny_imagenet(batch_size=64, test_batch_size=64, dataset_source='', path_to_data='tiny-imagenet-200/',resize=32):
+    """Tiny ImageNet dataloader.
+
+    Parameters
+    ----------
+    batch_size : int
+
+    path_to_data : string
+        Path to Tiny ImageNet data files root folder.
+    """
+    if dataset_source == 'server_other':
+        root = "/media/sdg/sravani/.gz/"
+    imagenet_data = TinyImageNet(root_folder=root+path_to_data,
+                                 transform=transforms.Compose([
+                                            # transforms.ToTensor(),
+                                            transforms.ToPILImage(),
+                                            transforms.Resize((resize,resize)),
+                                            transforms.ToTensor(),
+        # transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ]))
+    split_1 = .9
+    split_2 = .1
+    shuffle_dataset = True
+    random_seed= 42
+
+    # Creating data indices for training and validation splits:
+    dataset_size = len(imagenet_data)
+    indices = list(range(dataset_size))
+    split_1 = int(np.floor(split_1 * dataset_size))
+    split_2 = int(np.floor(split_2 * dataset_size))
+    if shuffle_dataset :
+        np.random.seed(random_seed)
+        np.random.shuffle(indices)
+    train_indices, eval_indices, test_indices = indices[:split_1], indices[split_1:(split_1+split_2)], indices[(split_1):]
+
+    # Creating PT data samplers and loaders:
+    train_sampler = SubsetRandomSampler(train_indices)
+    eval_sampler = SubsetRandomSampler(eval_indices)
+    test_sampler = SubsetRandomSampler(test_indices)
+
+    train_loader = DataLoader(imagenet_data
+        ,batch_size=batch_size, shuffle=False, num_workers=1, drop_last=True, sampler=train_sampler)
+
+    eval_loader = DataLoader(imagenet_data
+        ,batch_size=test_batch_size, shuffle=False, num_workers=1, drop_last=True, sampler=eval_sampler)
+
+    test_loader = DataLoader(imagenet_data
+        ,batch_size=test_batch_size, shuffle=False, num_workers=1, drop_last=True, sampler=test_sampler)
+
+    return train_loader, test_loader, imagenet_data
+
+
+class TinyImageNet(Dataset):
+    """Tiny ImageNet dataset (https://tiny-imagenet.herokuapp.com/), containing
+    64 x 64 ImageNet images from 200 classes.
+
+    Parameters
+    ----------
+    root_folder : string
+        Root folder of Tiny ImageNet dataset.
+
+    transform : torchvision.transforms
+    """
+    def __init__(self, root_folder='tiny-imagenet-200/', transform=None):
+        self.root_folder = root_folder
+        self.transform = transform
+        self.imgs_and_classes = []  # Paths to images and their classes
+
+        train_folder = root_folder + 'train/'
+        class_folders = glob.glob(train_folder + '*')  # One folder for each image class
+
+        for i, class_folder in enumerate(class_folders):
+            image_paths = glob.glob(class_folder + '/images/*.JPEG')
+            for image_path in image_paths:
+                self.imgs_and_classes.append((image_path, i))
+
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.imgs_and_classes)
+
+    def __getitem__(self, idx):
+        img_path, label = self.imgs_and_classes[idx]
+        img = imageio.imread(img_path)
+
+        if self.transform:
+            img = self.transform(img)
+
+        # Some images are grayscale, convert to RGB
+        if img.shape[0] == 1:
+            img = img.repeat(3, 1, 1)
+
+        return img, label
+
 # classes = classes_100
 def form_classes(dataset_size='normal'):
     if dataset_size=='normal':
@@ -156,10 +253,10 @@ def form_classes(dataset_size='normal'):
     noun_classes=dict([(v,i) for i,v in enumerate(n)])
     return classes,anp_classes,adj_classes,noun_classes
 
-def get_galaxyZoo_loaders(batch_size=20, test_batch_size=20,
+def get_mtvso_loaders(batch_size=20, test_batch_size=20,
         dataset_size='normal', resize=400, network='sqnxt', dataset_type='anp',
         dataset_source='server_main'):
-    from torch.utils.data.sampler import SubsetRandomSampler
+    # from torch.utils.data.sampler import SubsetRandomSampler
     # batch_size=training_config['batch_size']
     # test_batch_size=training_config['test_batch_size']
     # size=training_config['img_size']
@@ -228,6 +325,7 @@ def get_galaxyZoo_loaders(batch_size=20, test_batch_size=20,
         gz_root = '/raid/cs19mtech11019/bi_concepts1553'
 
     gz_root = '/raid/cs19mtech11019/' + 'imageFolder'
+    gz_root = '/media/sdg/sravani/.gz/' + 'imageFolder'
 
     gz_dataset = datasets.ImageFolder(root=gz_root
             # ,train=True, download=True
@@ -279,7 +377,7 @@ def get_galaxyZoo_loaders(batch_size=20, test_batch_size=20,
 
     return train_loader, test_loader, gz_dataset
 
-def galaxy_zoo(batch_size=20, test_batch_size=20,
+def get_galaxyzoo_loaders(batch_size=20, test_batch_size=20,
         dataset_size='normal', resize=400, crop_size=424, network='sqnxt', dataset_type='anp',
         dataset_source='server_main'):
     # batch_size=20, test_batch_size=20,
