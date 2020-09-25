@@ -23,7 +23,7 @@ import os
 import shutil
 from torch_ACA import odesolve_endtime as odesolve
 
-from data_helper import get_galaxyzoo_loaders, get_mtvso_loaders, tiny_imagenet
+from data_helper import get_galaxyzoo_loaders, get_mtvso_loaders, tiny_imagenet, get_mnist_loaders
 
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -37,7 +37,7 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 parser = argparse.ArgumentParser()
 parser.add_argument('--network', type = str, choices = ['resnet', 'sqnxt', 'pytorch_resnet50_single'], default = 'resnet')
 parser.add_argument('--method', type = str, choices=['Euler', 'RK2', 'RK4','RK23','RK45','RK12','Dopri5'], default = 'RK12')
-parser.add_argument('--dataset', type = str, choices = ['cifar10', 'galaxyzoo', 'mtvso', 'tiny_imagenet'], default = 'tiny_imagenet')
+parser.add_argument('--dataset', type = str, choices = ['cifar10', 'galaxyzoo', 'mtvso', 'tiny_imagenet', 'mnist'], default = 'tiny_imagenet')
 parser.add_argument('--dataset_type', type = str, choices = ['anp', 'adj', 'noun'], default = 'anp')
 parser.add_argument('--dataset_source', type = str, choices = ['local', 'server_main', 'server_nilesh', 'server_other'], default = 'server_main')
 parser.add_argument('--dataset_size', type = str, choices = ['small', 'smallFull', 'normal', 'large'], default = 'normal')
@@ -46,7 +46,8 @@ parser.add_argument('--start_epoch', type = int, default = 0)
 # Checkpoints
 parser.add_argument('-c', '--checkpoint', default='./checkpoint', type=str, metavar='PATH',
                     help='path to save checkpoint (default: checkpoint)')
-parser.add_argument('--resume', default='', type=str, metavar='PATH',
+parser.add_argument('--resume', action='store_true')
+parser.add_argument('--resume_path', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 
 parser.add_argument('--lr', type=float, default = 0.1)
@@ -171,6 +172,8 @@ elif args.dataset == 'galaxyzoo':
 elif args.dataset == 'tiny_imagenet':
     train_loader, test_loader, train_dataset = tiny_imagenet(batch_size=args.batch_size, test_batch_size=args.test_batch_size,
         resize=args.resize, dataset_source=args.dataset_source)
+elif args.dataset == 'mnist':
+    train_loader, test_loader, train_dataset = get_mnist_loaders(batch_size=args.batch_size, test_batch_size=args.test_batch_size)
 
 if args.dataset == 'mtvso':
     # if args.dataset_size=='normal':
@@ -192,14 +195,20 @@ elif args.dataset == 'cifar10':
     num_classes = 10
 elif args.dataset == 'tiny_imagenet':
     num_classes = 200
+elif args.dataset == 'mnist':
+    num_classes = 10
 
+if args.dataset == 'mnist':
+    num_channels = 1
+else:
+    num_channels = 3
 
 """here is model definition fff"""
 
 if args.network == 'sqnxt':
     net = SqNxt_23_1x(num_classes, ODEBlock)
 elif args.network == 'resnet':
-    net = ResNet18(ODEBlock, device, num_classes=num_classes, augment_dim=args.augment_dim)
+    net = ResNet18(ODEBlock, device, num_classes=num_classes, augment_dim=args.augment_dim, num_channels=num_channels)
 elif args.network == 'pytorch_resnet50_single':
     # if args.dataset_type == 'anp':
     #     num_classes=num_classes[0]
@@ -223,7 +232,7 @@ net.apply(conv_init)
 print(net)
 if is_use_cuda:
     net = nn.DataParallel(net)
-    net.cuda()#to(device)
+    net.to(device)#to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer  = optim.SGD(net.parameters(), lr = args.lr, momentum = 0.9, weight_decay = 5e-4)
 
@@ -236,11 +245,11 @@ def train(epoch):
     print('Training Epoch: #%d, LR: %.4f'%(epoch, lr_schedule(lr, epoch)))
     for idx, (inputs, labels) in enumerate(train_loader):
         if is_use_cuda:
-            inputs, labels = inputs.cuda(), labels.cuda()
+            inputs, labels = inputs.to(device), labels.to(device)
         optimizer.zero_grad()
         with torch.autograd.set_detect_anomaly(True):
             # import pdb; pdb.set_trace()
-            outputs = net(inputs).cuda()
+            outputs = net(inputs).to(device)
             loss = criterion(outputs, labels)
             loss.backward()
 
@@ -267,7 +276,7 @@ def test(epoch):
     total = 0
     for idx, (inputs, labels) in enumerate(test_loader):
         if is_use_cuda:
-            inputs, labels = inputs.cuda(), labels.cuda()
+            inputs, labels = inputs.to(device), labels.to(device)
         outputs = net(inputs)
         loss = criterion(outputs, labels)
         
@@ -304,9 +313,17 @@ best_acc = 0.0
 if args.resume:
         # Load checkpoint.
         print('==> Resuming from checkpoint..')
-        assert os.path.isfile(args.resume), 'Error: no checkpoint directory found!'
-        args.checkpoint = os.path.dirname(args.resume)
-        checkpoint = torch.load(args.resume)
+        if args.resume_path:
+            assert os.path.isfile(args.resume_path), 'Error: no directory found for resume_path!'
+            resume_path = args.resume_path
+        else:
+            resume_path_dir = parser.get_default('checkpoint')+'_' \
+                +args.network+'_'+args.method+'_'+args.dataset
+            resume_path = os.path.join(resume_path_dir, 'checkpoint.pth.tar')
+            print('looking for ',resume_path, ' as **DEFAULT** dir')
+            assert os.path.isfile(resume_path), 'Error: no directory found using resume_path! **DEFAULT**'
+        args.checkpoint = os.path.dirname(resume_path)
+        checkpoint = torch.load(resume_path)
         best_acc = checkpoint['best_acc']
         start_epoch = checkpoint['epoch']
         net.load_state_dict(checkpoint['state_dict'])
@@ -328,6 +345,13 @@ for _epoch in range(start_epoch, start_epoch + num_epochs):
 
     # save model
     is_best = test_acc > best_acc
+
+    if args.checkpoint != './checkpoint':
+        checkpoint = args.checkpoint 
+    else:
+        checkpoint = args.checkpoint+'_'+args.network+'_'+args.method+ \
+            '_'+args.dataset
+
     best_acc = max(test_acc, best_acc)
     save_checkpoint({
         'epoch': _epoch + 1,
@@ -335,7 +359,7 @@ for _epoch in range(start_epoch, start_epoch + num_epochs):
         'acc': test_acc,
         'best_acc': best_acc,
         'optimizer': optimizer.state_dict(),
-    }, is_best, checkpoint=args.checkpoint+'_'+args.method+'_'+args.network)
+    }, is_best, checkpoint=checkpoint)
 
 print('Best Acc@1: %.4f' % (best_acc * 100))
 # writer.close()

@@ -98,17 +98,17 @@ def get_mnist_loaders(batch_size=128, test_batch_size=1000, perc=1.0):
 
     train_loader = DataLoader(
         datasets.MNIST(root='.data/mnist', train=True, download=True, transform=transform_train), batch_size=batch_size,
-        shuffle=True, num_workers=2, drop_last=True
+        shuffle=True, num_workers=0, drop_last=True
     )
 
     train_eval_loader = DataLoader(
         datasets.MNIST(root='.data/mnist', train=True, download=True, transform=transform_test),
-        batch_size=test_batch_size, shuffle=True, num_workers=2, drop_last=True
+        batch_size=test_batch_size, shuffle=True, num_workers=0, drop_last=True
     )
 
     test_loader = DataLoader(
         datasets.MNIST(root='.data/mnist', train=False, download=True, transform=transform_test),
-        batch_size=test_batch_size, shuffle=False, num_workers=2, drop_last=True
+        batch_size=test_batch_size, shuffle=False, num_workers=0, drop_last=True
     )
 
     return train_loader, test_loader, train_eval_loader
@@ -131,11 +131,11 @@ def get_cifar_loaders(batch_size=128, test_batch_size=1000):
 
     train_loader = DataLoader(
         datasets.CIFAR10(root='.data/cifar', train=True, download=True, transform=transform_train), batch_size=batch_size,
-        shuffle=True, num_workers=3)
+        shuffle=True, num_workers=0)
 
     test_loader = DataLoader(
         datasets.CIFAR10(root='.data/cifar', train=False, download=True, transform=transform_test),
-        batch_size=test_batch_size, shuffle=False, num_workers=3)
+        batch_size=test_batch_size, shuffle=False, num_workers=0)
 
     return train_loader, test_loader, None
 
@@ -180,13 +180,13 @@ def tiny_imagenet(batch_size=64, test_batch_size=64, dataset_source='', path_to_
     test_sampler = SubsetRandomSampler(test_indices)
 
     train_loader = DataLoader(imagenet_data
-        ,batch_size=batch_size, shuffle=False, num_workers=1, drop_last=True, sampler=train_sampler)
+        ,batch_size=batch_size, shuffle=False, num_workers=0, drop_last=True, sampler=train_sampler)
 
     eval_loader = DataLoader(imagenet_data
-        ,batch_size=test_batch_size, shuffle=False, num_workers=1, drop_last=True, sampler=eval_sampler)
+        ,batch_size=test_batch_size, shuffle=False, num_workers=0, drop_last=True, sampler=eval_sampler)
 
     test_loader = DataLoader(imagenet_data
-        ,batch_size=test_batch_size, shuffle=False, num_workers=1, drop_last=True, sampler=test_sampler)
+        ,batch_size=test_batch_size, shuffle=False, num_workers=0, drop_last=True, sampler=test_sampler)
 
     return train_loader, test_loader, imagenet_data
 
@@ -361,17 +361,17 @@ def get_mtvso_loaders(batch_size=20, test_batch_size=20,
 
     train_loader = DataLoader(gz_dataset
         ,batch_size=batch_size,
-        shuffle=False, num_workers=1, drop_last=True
+        shuffle=False, num_workers=0, drop_last=True
         ,sampler=train_sampler
     )
 
     # train_eval_loader = DataLoader(validation_dataset
-    #     ,batch_size=test_batch_size, shuffle=True, num_workers=2, drop_last=True
+    #     ,batch_size=test_batch_size, shuffle=True, num_workers=0, drop_last=True
     # )
 
     test_loader = DataLoader(gz_dataset
         ,batch_size=test_batch_size,
-        shuffle=False, num_workers=1, drop_last=True
+        shuffle=False, num_workers=0, drop_last=True
         ,sampler=test_sampler
     )
 
@@ -422,13 +422,13 @@ def get_galaxyzoo_loaders(batch_size=20, test_batch_size=20,
     test_sampler = SubsetRandomSampler(test_indices)
 
     train_loader = DataLoader(gz_dataset
-        ,batch_size=batch_size, shuffle=False, num_workers=1, drop_last=True, sampler=train_sampler)
+        ,batch_size=batch_size, shuffle=False, num_workers=0, drop_last=True, sampler=train_sampler)
 
     eval_loader = DataLoader(gz_dataset
-        ,batch_size=test_batch_size, shuffle=False, num_workers=1, drop_last=True, sampler=eval_sampler)
+        ,batch_size=test_batch_size, shuffle=False, num_workers=0, drop_last=True, sampler=eval_sampler)
 
     test_loader = DataLoader(gz_dataset
-        ,batch_size=test_batch_size, shuffle=False, num_workers=1, drop_last=True, sampler=test_sampler)
+        ,batch_size=test_batch_size, shuffle=False, num_workers=0, drop_last=True, sampler=test_sampler)
 
     return train_loader, test_loader, gz_dataset
 

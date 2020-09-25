@@ -90,7 +90,7 @@ class BasicBlock22(nn.Module):
         return out
 
 class ResNet(nn.Module):
-    def __init__(self, block, num_blocks, device, num_classes = 10, ODEBlock_ = None, augment_dim = 0):
+    def __init__(self, block, num_blocks, device, num_classes = 10, ODEBlock_ = None, augment_dim = 0,num_channels=3):
         super(ResNet, self).__init__()
         self.device = device
         self.in_planes = 64
@@ -98,7 +98,7 @@ class ResNet(nn.Module):
         self.augment_dim = augment_dim
         # import pdb; pdb.set_trace()
 
-        self.conv1 = nn.Conv2d(3+self.augment_dim, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(num_channels+self.augment_dim, 64, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.layer1_1 = self._make_layer(64, 1, stride=1)
         self.layer1_2 = self._make_layer2(64, num_blocks[0]-1, stride=1)
@@ -147,11 +147,11 @@ class ResNet(nn.Module):
         batch_size, channels, height, width = x.shape
         aug = torch.zeros(batch_size, self.augment_dim,
                           height, width).to(self.device)
-        # Shape (batch_size, channels + augment_dim, height, width)
+        ## Shape (batch_size, channels + augment_dim, height, width)
         x_aug = torch.cat([x, aug], 1)
 
-        # out = self.conv1(x_aug)
-        out = self.conv1(x)
+        out = self.conv1(x_aug)
+        # out = self.conv1(x)
         out = self.bn1(out)
         out = F.relu(out)
         out = self.layer1_1(out)
@@ -171,8 +171,8 @@ class ResNet(nn.Module):
         # return outputs
         return out
 
-def ResNet18(ODEBlock, device, num_classes=10, augment_dim=0):
+def ResNet18(ODEBlock, device, num_classes=10, augment_dim=0,num_channels=3):
       return ResNet(BasicBlock, [3, 4, 6, 3], ODEBlock_ = ODEBlock, device=device, num_classes=num_classes,
-        augment_dim=augment_dim)
+        augment_dim=augment_dim, num_channels=num_channels)
 
 
