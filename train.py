@@ -27,6 +27,7 @@ from data_helper import get_galaxyzoo_loaders, get_mtvso_loaders, tiny_imagenet,
 
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
+from plots import plot_roc, precision_recall
 
 # os.environ['CUDA_VISIBLE_DEVICES'] = ''
 # os.environ['CUDA_VISIBLE_DEVICES'] = '0'
@@ -37,9 +38,9 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 parser = argparse.ArgumentParser()
 parser.add_argument('--network', type = str, choices = ['resnet', 'sqnxt', 'pytorch_resnet50_single'], default = 'resnet')
 parser.add_argument('--method', type = str, choices=['Euler', 'RK2', 'RK4','RK23','RK45','RK12','Dopri5'], default = 'RK12')
-parser.add_argument('--dataset', type = str, choices = ['cifar10', 'galaxyzoo', 'mtvso', 'tiny_imagenet', 'mnist'], default = 'tiny_imagenet')
+parser.add_argument('--dataset', type = str, choices = ['cifar10', 'galaxyzoo', 'mtvso', 'tiny_imagenet', 'mnist'], default = 'galaxyzoo')
 parser.add_argument('--dataset_type', type = str, choices = ['anp', 'adj', 'noun'], default = 'anp')
-parser.add_argument('--dataset_source', type = str, choices = ['local', 'server_main', 'server_nilesh', 'server_other'], default = 'server_main')
+parser.add_argument('--dataset_source', type = str, choices = ['local', 'server_main', 'server_nilesh', 'server_other'], default = 'server_other')
 parser.add_argument('--dataset_size', type = str, choices = ['small', 'smallFull', 'normal', 'large'], default = 'normal')
 parser.add_argument('--num_epochs', type = int, default = 15)
 parser.add_argument('--start_epoch', type = int, default = 0)
@@ -64,7 +65,7 @@ parser.add_argument('--test_batch_size', type = int, default = 10)
 parser.add_argument('--crop_type', type = str, choices = ['center','random'], default = 'center')
 parser.add_argument('--crop_size', type = int, default = 32)
 parser.add_argument('--resize', type = int, default = 32)
-parser.add_argument('--augment_dim', type = int, default = 0)
+parser.add_argument('--aug_dim', type = int, default = 10)
 args = parser.parse_args()
 if args.network == 'sqnxt':
     from cifar_classification.models.sqnxt import SqNxt_23_1x
@@ -166,7 +167,7 @@ if args.dataset == 'cifar10':
 #     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
 # ])
 elif args.dataset == 'galaxyzoo':
-    train_loader, test_loader, train_dataset = galaxy_zoo(batch_size=args.batch_size, test_batch_size=args.test_batch_size,
+    train_loader, test_loader, train_dataset = get_galaxyzoo_loaders(batch_size=args.batch_size, test_batch_size=args.test_batch_size,
         dataset_size=args.dataset_size, resize=args.resize, network=args.network, dataset_type=args.dataset_type,
         dataset_source=args.dataset_source)
 elif args.dataset == 'tiny_imagenet':
@@ -208,7 +209,7 @@ else:
 if args.network == 'sqnxt':
     net = SqNxt_23_1x(num_classes, ODEBlock)
 elif args.network == 'resnet':
-    net = ResNet18(ODEBlock, device, num_classes=num_classes, augment_dim=args.augment_dim, num_channels=num_channels)
+    net = ResNet18(ODEBlock, device, num_classes=num_classes, augment_dim=args.aug_dim, num_channels=num_channels)
 elif args.network == 'pytorch_resnet50_single':
     # if args.dataset_type == 'anp':
     #     num_classes=num_classes[0]
@@ -274,6 +275,9 @@ def test(epoch):
     test_loss = 0
     correct = 0
     total = 0
+    y_test =[]
+    y_score =[]
+
     for idx, (inputs, labels) in enumerate(test_loader):
         if is_use_cuda:
             inputs, labels = inputs.to(device), labels.to(device)
@@ -285,6 +289,12 @@ def test(epoch):
         total += labels.size(0)
         correct += predict.eq(labels).cpu().sum().double()
         # writer.add_scalar('Test/Loss', loss.item(), epoch* 50000 + test_loader.batch_size * (idx + 1)  )
+
+        # --------------------------------------------------------
+        target = F.one_hot(labels,num_classes)
+        y_test.append(target.cpu().detach().numpy())
+        y_score.append(outputs.cpu().detach().numpy())
+        # --------------------------------------------------------
         
         sys.stdout.write('\r')
         sys.stdout.write('[%s] Testing Epoch  [%d/%d] Loss: %.4f Acc@1: %.3f'
@@ -294,7 +304,7 @@ def test(epoch):
 
     acc = correct / total
     # writer.add_scalar('Test/Accuracy', acc, epoch )
-    return acc
+    return acc, y_test, y_score
 
 def adjust_learning_rate(optimizer, lr):
     for param_group in optimizer.param_groups:
@@ -314,8 +324,9 @@ if args.resume:
         # Load checkpoint.
         print('==> Resuming from checkpoint..')
         if args.resume_path:
-            assert os.path.isfile(args.resume_path), 'Error: no directory found for resume_path!'
-            resume_path = args.resume_path
+            resume_path_dir = args.resume_path
+            resume_path = os.path.join(resume_path_dir, 'checkpoint.pth.tar')
+            assert os.path.isfile(resume_path), 'Error: no directory found for resume_path!'
         else:
             resume_path_dir = parser.get_default('checkpoint')+'_' \
                 +args.network+'_'+args.method+'_'+args.dataset
@@ -337,7 +348,7 @@ for _epoch in range(start_epoch, start_epoch + num_epochs):
 
     train(_epoch)
     print()
-    test_acc = test(_epoch)
+    test_acc, y_test, y_score = test(_epoch)
     print()
     print()
     end_time   = time.time()
@@ -360,6 +371,17 @@ for _epoch in range(start_epoch, start_epoch + num_epochs):
         'best_acc': best_acc,
         'optimizer': optimizer.state_dict(),
     }, is_best, checkpoint=checkpoint)
+
+    
+    # -----------------------------------------------------------------
+    if _epoch == (start_epoch + num_epochs -1):
+        print('********** last epoch. calculating roc and precision ********')
+        y_test=[np.array(x) for x in y_test]
+        y_score=[np.array(x) for x in y_score]
+        plot_roc(y_test, y_score, num_classes)
+        precision_recall(y_test, y_score, num_classes)
+    # -----------------------------------------------------------------
+
 
 print('Best Acc@1: %.4f' % (best_acc * 100))
 # writer.close()

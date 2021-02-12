@@ -397,6 +397,7 @@ def get_galaxyzoo_loaders(batch_size=20, test_batch_size=20,
         ])
 
     gz_root = '/raid/cs19mtech11019/' + 'imageFolder'
+    gz_root = '/media/sdg/sravani/.gz/' + 'imageFolder'
     
     gz_dataset = datasets.ImageFolder(root=gz_root
         ,transform=transform_train)
