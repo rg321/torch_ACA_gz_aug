@@ -23,21 +23,22 @@ import os
 import shutil
 from torch_ACA import odesolve_endtime as odesolve
 
-from data_helper import get_galaxyzoo_loaders, get_mtvso_loaders, tiny_imagenet
+from data_helper import get_galaxyzoo_loaders, get_mtvso_loaders, tiny_imagenet, get_mnist_loaders
 
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
-
+from plots import plot_roc, precision_recall
 # os.environ['CUDA_VISIBLE_DEVICES'] = ''
 # os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-# os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3,4,5'
+# os.environ['CUDA_VISIBLE_DEVICES'] = '4,5,6,7'
+os.environ['CUDA_VISIBLE_DEVICES'] = '1,3,4,5'
 
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--network', type = str, choices = ['resnet', 'sqnxt', 'pytorch_resnet50_single'], default = 'resnet')
+parser.add_argument('--network', type = str, choices = ['resnet', 'sqnxt', 'pytorch_resnet50_single'], default = 'sqnxt')
 parser.add_argument('--method', type = str, choices=['Euler', 'RK2', 'RK4','RK23','RK45','RK12','Dopri5'], default = 'RK12')
-parser.add_argument('--dataset', type = str, choices = ['cifar10', 'galaxyzoo', 'mtvso', 'tiny_imagenet'], default = 'tiny_imagenet')
+parser.add_argument('--dataset', type = str, choices = ['cifar10', 'galaxyzoo', 'mtvso', 'tiny_imagenet', 'mnist'], default = 'galaxyzoo')
 parser.add_argument('--dataset_type', type = str, choices = ['anp', 'adj', 'noun'], default = 'anp')
 parser.add_argument('--dataset_source', type = str, choices = ['local', 'server_main', 'server_nilesh', 'server_other'], default = 'server_main')
 parser.add_argument('--dataset_size', type = str, choices = ['small', 'smallFull', 'normal', 'large'], default = 'normal')
@@ -46,7 +47,8 @@ parser.add_argument('--start_epoch', type = int, default = 0)
 # Checkpoints
 parser.add_argument('-c', '--checkpoint', default='./checkpoint', type=str, metavar='PATH',
                     help='path to save checkpoint (default: checkpoint)')
-parser.add_argument('--resume', default='', type=str, metavar='PATH',
+parser.add_argument('--resume', action='store_true')
+parser.add_argument('--resume_path', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 
 parser.add_argument('--lr', type=float, default = 0.1)
@@ -58,8 +60,8 @@ parser.add_argument('--atol', type=float, default = 1e-2, help='Absolute toleran
 parser.add_argument('--print_neval', type=bool, default = False, help='Print number of evaluation or not')
 parser.add_argument('--neval_max', type=int, default = 50000, help='Maximum number of evaluation in integration')
 
-parser.add_argument('--batch_size', type = int, default = 20)
-parser.add_argument('--test_batch_size', type = int, default = 10)
+parser.add_argument('--batch_size', type = int, default = 64)
+parser.add_argument('--test_batch_size', type = int, default = 32)
 parser.add_argument('--crop_type', type = str, choices = ['center','random'], default = 'center')
 parser.add_argument('--crop_size', type = int, default = 32)
 parser.add_argument('--resize', type = int, default = 32)
@@ -165,12 +167,14 @@ if args.dataset == 'cifar10':
 #     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
 # ])
 elif args.dataset == 'galaxyzoo':
-    train_loader, test_loader, train_dataset = galaxy_zoo(batch_size=args.batch_size, test_batch_size=args.test_batch_size,
+    train_loader, test_loader, train_dataset = get_galaxyzoo_loaders(batch_size=args.batch_size, test_batch_size=args.test_batch_size,
         dataset_size=args.dataset_size, resize=args.resize, network=args.network, dataset_type=args.dataset_type,
         dataset_source=args.dataset_source)
 elif args.dataset == 'tiny_imagenet':
     train_loader, test_loader, train_dataset = tiny_imagenet(batch_size=args.batch_size, test_batch_size=args.test_batch_size,
         resize=args.resize, dataset_source=args.dataset_source)
+elif args.dataset == 'mnist':
+    train_loader, test_loader, train_dataset = get_mnist_loaders(batch_size=args.batch_size, test_batch_size=args.test_batch_size)
 
 if args.dataset == 'mtvso':
     # if args.dataset_size=='normal':
@@ -192,7 +196,13 @@ elif args.dataset == 'cifar10':
     num_classes = 10
 elif args.dataset == 'tiny_imagenet':
     num_classes = 200
+elif args.dataset == 'mnist':
+    num_classes = 10
 
+if args.dataset == 'mnist':
+    num_channels = 1
+else:
+    num_channels = 3
 
 """here is model definition fff"""
 
@@ -202,7 +212,7 @@ elif args.dataset == 'tiny_imagenet':
 if args.network == 'sqnxt':
     net = SqNxt_23_1x(num_classes, ODEBlock)
 elif args.network == 'resnet':
-    net = ResNet18(ODEBlock, device, num_classes=num_classes, augment_dim=args.augment_dim)
+    net = ResNet18(ODEBlock, device, num_classes=num_classes, augment_dim=args.augment_dim, num_channels=num_channels)
 elif args.network == 'pytorch_resnet50_single':
     # if args.dataset_type == 'anp':
     #     num_classes=num_classes[0]
@@ -226,7 +236,7 @@ net.apply(conv_init)
 print(net)
 if is_use_cuda:
     net = nn.DataParallel(net)
-    net.cuda()#to(device)
+    net.to(device)#to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer  = optim.SGD(net.parameters(), lr = args.lr, momentum = 0.9, weight_decay = 5e-4)
 
@@ -238,12 +248,12 @@ def train(epoch):
     
     print('Training Epoch: #%d, LR: %.4f'%(epoch, lr_schedule(lr, epoch)))
     for idx, (inputs, labels) in enumerate(train_loader):
+        # import pdb; pdb.set_trace()
         if is_use_cuda:
-            inputs, labels = inputs.cuda(), labels.cuda()
+            inputs, labels = inputs.to(device), labels.to(device)
         optimizer.zero_grad()
         with torch.autograd.set_detect_anomaly(True):
-            # import pdb; pdb.set_trace()
-            outputs = net(inputs).cuda()
+            outputs = net(inputs).to(device)
             loss = criterion(outputs, labels)
             loss.backward()
 
@@ -255,7 +265,7 @@ def train(epoch):
         correct += predict.eq(labels).cpu().sum().double()
         
         sys.stdout.write('\r')
-        sys.stdout.write('[%s] Training Epoch [%d/%d] Loss: %.4f Acc@1: %.3f'
+        sys.stdout.write('[%s] Training Epoch [%d/%d] Loss: %.4f Acc@1: %.3f\n'
                         % (time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())),
                            epoch, num_epochs, 
                            # idx, len(train_dataset) // batch_size, 
@@ -270,9 +280,19 @@ def test(epoch):
     total = 0
     for idx, (inputs, labels) in enumerate(test_loader):
         if is_use_cuda:
-            inputs, labels = inputs.cuda(), labels.cuda()
+            inputs, labels = inputs.to(device), labels.to(device)
         outputs = net(inputs)
         loss = criterion(outputs, labels)
+        if idx==0:
+            a=labels.detach().cpu() # all labels.cpu()
+            b=outputs.detach().cpu() # all outputs.cpu()
+        else:
+            a=np.concatenate((a,labels.detach().cpu())) # a actual class
+            b=np.concatenate((b,outputs.detach().cpu())) # b predicted class
+        # print('outputs',outputs)
+        # print('labels',labels)
+        # if epoch==(start_epoch + num_epochs-1):
+        #     precision_recall(labels.detach().cpu(), outputs.detach().cpu(),5)
         
         test_loss  += loss.item()
         _, predict = torch.max(outputs, 1)
@@ -285,6 +305,17 @@ def test(epoch):
                         % (time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())),
                            epoch, num_epochs, test_loss / (100 * (idx + 1)), correct / total))
         sys.stdout.flush()
+
+    # if epoch==(start_epoch + num_epochs-1):
+    from datetime import datetime
+    now_str=str(datetime.now().date())+'_'+str(datetime.now().time())
+    if not os.path.isfile('../node_aca_outputs_arrays_'+now_str):
+        open('node_aca_outputs_arrays_'+now_str,'a').close()
+
+    with open('node_aca_outputs_arrays_'+now_str,'wb') as fpw:
+        import pickle; pickle.dump([a, b, 5],fpw)
+
+    precision_recall(a, b,5)
 
     acc = correct / total
     # writer.add_scalar('Test/Accuracy', acc, epoch )
@@ -307,9 +338,17 @@ best_acc = 0.0
 if args.resume:
         # Load checkpoint.
         print('==> Resuming from checkpoint..')
-        assert os.path.isfile(args.resume), 'Error: no checkpoint directory found!'
-        args.checkpoint = os.path.dirname(args.resume)
-        checkpoint = torch.load(args.resume)
+        if args.resume_path:
+            assert os.path.isfile(args.resume_path), 'Error: no directory found for resume_path!'
+            resume_path = args.resume_path
+        else:
+            resume_path_dir = parser.get_default('checkpoint')+'_' \
+                +args.network+'_'+args.method+'_'+args.dataset
+            resume_path = os.path.join(resume_path_dir, 'checkpoint.pth.tar')
+            print('looking for ',resume_path, ' as **DEFAULT** dir')
+            assert os.path.isfile(resume_path), 'Error: no directory found using resume_path! **DEFAULT**'
+        args.checkpoint = os.path.dirname(resume_path)
+        checkpoint = torch.load(resume_path)
         best_acc = checkpoint['best_acc']
         start_epoch = checkpoint['epoch']
         net.load_state_dict(checkpoint['state_dict'])
@@ -321,7 +360,7 @@ for _epoch in range(start_epoch, start_epoch + num_epochs):
     _lr = lr_schedule(args.lr, _epoch)
     adjust_learning_rate(optimizer, _lr)
 
-    train(_epoch)
+    # train(_epoch)
     print()
     test_acc = test(_epoch)
     print()
@@ -331,6 +370,13 @@ for _epoch in range(start_epoch, start_epoch + num_epochs):
 
     # save model
     is_best = test_acc > best_acc
+
+    if args.checkpoint != './checkpoint':
+        checkpoint = args.checkpoint 
+    else:
+        checkpoint = args.checkpoint+'_'+args.network+'_'+args.method+ \
+            '_'+args.dataset
+
     best_acc = max(test_acc, best_acc)
     save_checkpoint({
         'epoch': _epoch + 1,
@@ -338,7 +384,7 @@ for _epoch in range(start_epoch, start_epoch + num_epochs):
         'acc': test_acc,
         'best_acc': best_acc,
         'optimizer': optimizer.state_dict(),
-    }, is_best, checkpoint=args.checkpoint+'_'+args.method+'_'+args.network)
+    }, is_best, checkpoint=checkpoint)
 
 print('Best Acc@1: %.4f' % (best_acc * 100))
 # writer.close()

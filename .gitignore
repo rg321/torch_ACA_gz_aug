@@ -2,3 +2,6 @@ __pycache__
 data/
 *.pyc
 checkpoint_*
+trainImages_*.json
+node_aca_outputs_arrays*
+results*
