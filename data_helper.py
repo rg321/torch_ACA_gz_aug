@@ -397,6 +397,7 @@ def get_galaxyzoo_loaders(batch_size=20, test_batch_size=20,
         ])
 
     gz_root = '/raid/cs19mtech11019/' + 'imageFolder'
+    gz_root = '/media/sdg/sravani/.gz/' + 'imageFolder'
     
     gz_dataset = datasets.ImageFolder(root=gz_root
         ,transform=transform_train)
@@ -439,7 +440,6 @@ def get_galaxyzoo_loaders(batch_size=20, test_batch_size=20,
         json.dump(train_fileNames_classes, fp)
     with open('testImages_'+now_str+'.json','a+') as fp:
         json.dump(test_fileNames_classes, fp)
-    return train_loader, test_loader, gz_dataset
 
 
 if __name__ == '__main__':
